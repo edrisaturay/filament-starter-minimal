@@ -15,14 +15,14 @@
         "illuminate/contracts": "^11.28|^12.0|^13.0",
         "illuminate/database": "^11.28|^12.0|^13.0",
         "illuminate/support": "^11.28|^12.0|^13.0",
-        "a909m/filament-statefusion": "^2.3",
-        "bezhansalleh/filament-language-switch": "^4.1",
-        "bezhansalleh/filament-panel-switch": "^3.0",
-        "bezhansalleh/filament-shield": "^4.1",
-        "charrafimed/global-search-modal": "^5.0",
-        "jeffgreco13/filament-breezy": "^3.2",
-        "shuvroroy/filament-spatie-laravel-backup": "^3.3|^3.4",
-        "shuvroroy/filament-spatie-laravel-health": "^3.2|^3.3"
+        "a909m/filament-statefusion": "^2.3.0",
+        "bezhansalleh/filament-language-switch": "^4.3.0",
+        "bezhansalleh/filament-panel-switch": "^3.1.0",
+        "bezhansalleh/filament-shield": "^4.2.0",
+        "charrafimed/global-search-modal": "^5.0.0",
+        "jeffgreco13/filament-breezy": "^3.2.5",
+        "shuvroroy/filament-spatie-laravel-backup": "^3.4.0",
+        "shuvroroy/filament-spatie-laravel-health": "^3.3.0"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0|^10.0",
