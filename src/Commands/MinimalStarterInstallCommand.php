@@ -144,7 +144,9 @@ class MinimalStarterInstallCommand extends Command
     }
 
     /**
-     * Plugins that ship their own install command.
+     * Plugins that ship their own install command. Each entry is keyed by the
+     * registry plugin key and points at an Artisan command that publishes
+     * configs/migrations and (where applicable) seeds the package.
      *
      * @return array<string, string>
      */
@@ -310,9 +312,13 @@ class MinimalStarterInstallCommand extends Command
     {
         return [
             'bezhansalleh/filament-language-switch' => 'filament-language-switch-config',
+            'bezhansalleh/filament-panel-switch' => 'filament-panel-switch-config',
             'awcodes/filament-quick-create' => 'filament-quick-create-config',
             'pxlrbt/filament-spotlight' => 'filament-spotlight-config',
             'charrafimed/global-search-modal' => 'global-search-modal-config',
+            'shuvroroy/filament-spatie-laravel-health' => 'filament-spatie-laravel-health-config',
+            'shuvroroy/filament-spatie-laravel-backup' => 'filament-spatie-laravel-backup-translations',
+            'jeffgreco13/filament-breezy' => 'filament-breezy-config',
         ];
     }
 
@@ -321,15 +327,29 @@ class MinimalStarterInstallCommand extends Command
      */
     protected function pluginMigrationPublishers(): array
     {
-        return [
+        $publishers = [
             'filament-breezy' => [
                 'label' => 'Filament Breezy',
                 'table' => 'breezy_sessions',
                 'tag' => 'filament-breezy-migrations',
-                'provider' => \Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider::class,
+                'provider' => class_exists(\Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider::class)
+                    ? \Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider::class
+                    : null,
                 'migration_glob' => '*_create_breezy_sessions_table.php',
             ],
         ];
+
+        if (class_exists(\Spatie\Health\HealthServiceProvider::class)) {
+            $publishers['filament-spatie-health'] = [
+                'label' => 'Spatie Health',
+                'table' => 'health_check_result_history_items',
+                'tag' => 'health-migrations',
+                'provider' => \Spatie\Health\HealthServiceProvider::class,
+                'migration_glob' => '*_create_health_tables.php',
+            ];
+        }
+
+        return $publishers;
     }
 
     protected function setupShield(): void
