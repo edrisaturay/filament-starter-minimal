@@ -2,6 +2,7 @@
 
 namespace EdrisaTuray\FilamentStarterMinimal\Filament\Resources\Concerns;
 
+use EdrisaTuray\FilamentStarterMinimal\Support\PlatformGate;
 use Illuminate\Support\Facades\Gate;
 
 trait AuthorizesPlatformAccess
@@ -11,12 +12,11 @@ trait AuthorizesPlatformAccess
      * can override decisions via:
      *
      *   Gate::before(function ($user, $ability) {
-     *       if ($ability === AuthorizesPlatformAccess::PLATFORM_GATE) {
+     *       if ($ability === PlatformGate::MANAGE_PLATFORM) {
      *           return /* your decision: true | false | null *\/;
      *       }
      *   });
      */
-    public const PLATFORM_GATE = 'filament-starter-minimal:manage-platform';
 
     /**
      * Whether the current user holds the configured super-admin role,
@@ -24,6 +24,6 @@ trait AuthorizesPlatformAccess
      */
     protected static function isSuperAdmin(): bool
     {
-        return Gate::allows(self::PLATFORM_GATE);
+        return Gate::allows(PlatformGate::MANAGE_PLATFORM);
     }
 }

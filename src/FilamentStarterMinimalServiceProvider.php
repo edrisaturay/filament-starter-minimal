@@ -8,8 +8,8 @@ use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterSafeModeCommand;
 use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterUpdateCommand;
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Filament\FilamentStarterMinimalPlugin;
-use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\Concerns\AuthorizesPlatformAccess;
 use EdrisaTuray\FilamentStarterMinimal\Registry\DefaultPluginCatalog;
+use EdrisaTuray\FilamentStarterMinimal\Support\PlatformGate;
 use EdrisaTuray\FilamentStarterMinimal\Support\PluginRegistry;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Gate;
@@ -42,7 +42,7 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
-        Gate::define(AuthorizesPlatformAccess::PLATFORM_GATE, function (Authenticatable $user): bool {
+        Gate::define(PlatformGate::MANAGE_PLATFORM, function (Authenticatable $user): bool {
             $role = config('filament-starter-minimal.superadmin.role', 'super_admin');
 
             return method_exists($user, 'hasRole') && $user->hasRole($role);
