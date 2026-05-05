@@ -268,7 +268,6 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-global-search-modal` | `charrafimed/global-search-modal` | Richer global search UI. |
 | `filament-spotlight` | `pxlrbt/filament-spotlight` | ⌘K spotlight launcher. |
 | `filament-quick-create` | `awcodes/filament-quick-create` | Topbar quick-create dropdown. Options: `excludes`, `includes`, `sort_by`. |
-| `filament-statefusion` | `a909m/filament-statefusion` | StateFusion. |
 
 Run `php artisan minimal-starter:doctor` after `composer require` to confirm the class autoloads — if a vendor renames their plugin class between versions, override the entry via `withPlugin()` (next section).
 

@@ -333,21 +333,6 @@ class DefaultPluginCatalog
                 class: 'Awcodes\\QuickCreate\\QuickCreatePlugin',
                 package: 'awcodes/filament-quick-create',
             ),
-
-            new PluginDefinition(
-                key: 'filament-statefusion',
-                label: 'StateFusion',
-                installer: function (Panel $panel, array $options): Panel {
-                    $class = '\\A909M\\FilamentStateFusion\\FilamentStateFusionPlugin';
-                    if (class_exists($class)) {
-                        $panel->plugin($class::make());
-                    }
-
-                    return $panel;
-                },
-                class: 'A909M\\FilamentStateFusion\\FilamentStateFusionPlugin',
-                package: 'a909m/filament-statefusion',
-            ),
         ];
     }
 }
