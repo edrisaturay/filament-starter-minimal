@@ -11,14 +11,12 @@ class PluginStateResolver
     /**
      * @return array<string, array{enabled: bool, options: array<string, mixed>}>
      */
-    public static function resolve(string $panelId, ?string $tenantId = null): array
+    public static function resolve(string $panelId): array
     {
         $registry = app(PluginRegistryContract::class);
-        $cacheKey = "starter_minimal_plugins_{$panelId}"
-            .($tenantId ? "_{$tenantId}" : '')
-            ."_v{$registry->signature()}";
+        $cacheKey = "starter_minimal_plugins_{$panelId}_v{$registry->signature()}";
 
-        $computeState = function () use ($panelId, $tenantId, $registry): array {
+        $computeState = function () use ($panelId, $registry): array {
             $definitions = $registry->all();
             $resolved = [];
 
@@ -37,11 +35,6 @@ class PluginStateResolver
             try {
                 $overrides = PanelPluginOverride::query()
                     ->where('panel_id', $panelId)
-                    ->when(
-                        $tenantId === null,
-                        fn ($q) => $q->whereNull('tenant_id'),
-                        fn ($q) => $q->where('tenant_id', $tenantId),
-                    )
                     ->get();
 
                 foreach ($overrides as $override) {
@@ -80,9 +73,9 @@ class PluginStateResolver
         }
     }
 
-    public static function invalidate(string $panelId, ?string $tenantId = null): void
+    public static function invalidate(string $panelId): void
     {
-        $cacheKey = "starter_minimal_plugins_{$panelId}".($tenantId ? "_{$tenantId}" : '');
-        Cache::forget($cacheKey);
+        $registry = app(PluginRegistryContract::class);
+        Cache::forget("starter_minimal_plugins_{$panelId}_v{$registry->signature()}");
     }
 }

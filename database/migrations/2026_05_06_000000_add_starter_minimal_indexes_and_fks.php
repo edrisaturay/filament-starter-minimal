@@ -19,9 +19,9 @@ return new class extends Migration
             $blueprint->index('last_seen_at', 'panel_snapshots_last_seen_idx');
         });
 
-        // The composite unique on (panel_id, plugin_key, tenant_id) already
-        // covers panel_id as its leftmost prefix — drop the redundant single-
-        // column index. SQLite/MySQL drop is best-effort; ignore failure on
+        // The composite unique on (panel_id, plugin_key) already covers
+        // panel_id as its leftmost prefix — drop the redundant single-column
+        // index. SQLite/MySQL drop is best-effort; ignore failure on
         // non-conforming drivers.
         Schema::table('starter_minimal_panel_plugin_overrides', function (Blueprint $blueprint): void {
             try {

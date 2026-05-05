@@ -15,15 +15,13 @@ return new class extends Migration
             $blueprint->boolean('enabled')->nullable();
             $blueprint->boolean('is_dangerous')->default(false);
             $blueprint->json('options')->nullable();
-            $blueprint->integer('options_version')->default(1);
-            $blueprint->string('tenant_id')->nullable();
+            $blueprint->unsignedInteger('options_version')->default(1);
             $blueprint->unsignedBigInteger('updated_by_user_id')->nullable();
             $blueprint->timestamps();
 
             $blueprint->index('panel_id');
             $blueprint->index('plugin_key');
-            $blueprint->index('tenant_id');
-            $blueprint->unique(['panel_id', 'plugin_key', 'tenant_id'], 'starter_minimal_overrides_unique');
+            $blueprint->unique(['panel_id', 'plugin_key'], 'starter_minimal_overrides_unique');
         });
 
         Schema::create('starter_minimal_panel_snapshots', function (Blueprint $blueprint) {

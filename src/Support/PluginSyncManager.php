@@ -57,7 +57,6 @@ class PluginSyncManager
                         [
                             'panel_id' => $panelId,
                             'plugin_key' => $pluginKey,
-                            'tenant_id' => null,
                         ],
                         [
                             'enabled' => $definition->defaultEnabled,
@@ -69,7 +68,6 @@ class PluginSyncManager
             }
 
             $stale = PanelPluginOverride::query()
-                ->whereNull('tenant_id')
                 ->where(function ($query) use ($registryKeys, $managedPanels): void {
                     $query->whereNotIn('plugin_key', $registryKeys)
                         ->orWhereNotIn('panel_id', $managedPanels);

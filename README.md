@@ -193,7 +193,6 @@ File: `config/filament-starter-minimal.php` (merged as `filament-starter-minimal
 | Key | Purpose |
 |-----|---------|
 | `safe_mode` | When `true` (or env `STARTER_MINIMAL_SAFE_MODE=true`), dangerous registry plugins are forced on. Usually toggled via `minimal-starter:safe-mode` (cache). |
-| `tenancy.enabled` | When `true`, tenant-related UI (e.g. `tenant_id` on overrides) can be shown. Reserved for future parity with the full starter. |
 | `superadmin.role` | Role name checked by Platform resources (`hasRole()`). Default: `super_admin`. |
 | `managed_panels` | Panel IDs that receive **registry** installers via `PlatformPanelFactory`. |
 | `plugin_defaults` | Nested: `panel_id` → `plugin_key` → `enabled`, `options`. Used before DB overrides. |
@@ -227,8 +226,8 @@ All tables use the **`starter_minimal_`** prefix so this package can coexist wit
 
 | Table | Purpose |
 |-------|---------|
-| `starter_minimal_panel_plugin_overrides` | Per-panel, per-plugin `enabled`, `is_dangerous`, `options`, optional `tenant_id`. Also `options_version` (currently always `1`, reserved for future schema migrations) and `updated_by_user_id` (reserved; not yet auto-set by sync — populate manually if needed). |
-| `starter_minimal_panel_snapshots` | Latest known Filament panel metadata (`path`, domains, middleware, tenancy flag). |
+| `starter_minimal_panel_plugin_overrides` | Per-panel, per-plugin `enabled`, `is_dangerous`, `options`. Also `options_version` (currently always `1`, reserved for future schema migrations) and `updated_by_user_id` (reserved; not yet auto-set by sync — populate manually if needed). Unique on `(panel_id, plugin_key)`. |
+| `starter_minimal_panel_snapshots` | Latest known Filament panel metadata (`path`, domains, middleware, and the consumer panel's `hasTenancy()` flag — informational only; this package itself is not multi-tenant aware). |
 | `starter_minimal_audit_logs` | Append-only log for plugin sync and override changes. Immutable — `update`/`delete` throw at the model layer. `actor_user_id` is auto-injected from `auth()->id()` and is **not** mass-assignable. |
 
 **Dangerous plugins:** If `is_dangerous` is true, the `PanelPluginOverride` model forces `enabled` to stay true (same behavior as the full starter).
@@ -339,8 +338,8 @@ This blocks the chained-takeover path where a third-party plugin could redefine 
 
 ## Caching and invalidation
 
-- Resolved state is cached **forever** per panel under key `starter_minimal_plugins_{panelId}` (with `_{tenantId}` suffix when a tenant is supplied).
-- Saving or deleting a `PanelPluginOverride` calls **`PluginStateResolver::invalidate()`** for that panel (and the previous tenant if `tenant_id` changed).
+- Resolved state is cached **forever** per panel under key `starter_minimal_plugins_{panelId}_v{registry-signature}`. The signature changes whenever a `PluginDefinition` is added, removed, or has its `defaultEnabled`/`dangerousToDisable` modified — so registering a plugin via `withPlugin()` automatically misses the old cache.
+- Saving or deleting a `PanelPluginOverride` calls **`PluginStateResolver::invalidate()`** for that panel.
 - The **Clear Plugin Cache** action in Plugin Management clears the resolver cache for **all** registered Filament panels.
 - When **safe mode** is active, resolved state forces `dangerous_to_disable` plugins on before the result is cached; use **`minimal-starter:safe-mode on|off`** so caches are invalidated automatically.
 
@@ -364,8 +363,8 @@ Out of the box, with **zero published config**:
 
 - `managed_panels` is `['admin']` — only a panel with id `admin` receives registry plugins from `PlatformPanelFactory`.
 - `superadmin.role` is `super_admin` — the role name checked by every Platform resource. **Your User model must have `spatie/laravel-permission`'s `HasRoles` trait** (or another implementation that exposes a `hasRole(string $role)` method), and a role with that name must exist and be assigned. If neither is true, the resources are simply invisible to all users (closed-default).
-- `tenancy.enabled` is `false`.
 - `safe_mode` is `false`.
+- This package is **single-tenant**. The override / snapshot / audit tables key by `panel_id` only. The consumer's individual Filament panels may use Filament tenancy themselves — that's orthogonal.
 - The registry seeds `filament-shield` (`enabled = true`, `dangerous_to_disable = true`); every other plugin in the catalog is registered as `enabled = false`. Toggle them on per-panel via Plugin Management or via `plugin_defaults` in the published config.
 
 ## Troubleshooting
@@ -377,7 +376,6 @@ Out of the box, with **zero published config**:
 | Toggling a plugin in the UI does nothing | Check that the panel id is in `managed_panels`. `PlatformPanelFactory` short-circuits non-managed panels even though the resources still appear. |
 | `Cache::rememberForever` returns stale state in production | The cache driver must be persistent (`redis`, `database`, `file`). The resolver caches forever; with `array` driver the cache is recreated cold every request. |
 | Doctor reports a plugin's class missing after `composer require` | The vendor renamed its plugin class. Override the entry via `FilamentStarterMinimalPlugin::make()->withPlugin(new PluginDefinition(...))` with the correct FQCN, then run **Sync from Registry**. |
-| Two override rows with the same `(panel_id, plugin_key)` and `tenant_id = NULL` | MySQL treats `NULL` as distinct in unique indexes. The current sync path serializes through `Cache::lock`, so concurrent syncs cannot create this — but if the table is mutated outside sync, deduplicate manually. |
 | Shield resources appearing twice | You registered both `FilamentStarterMinimalPlugin::make()` and `FilamentShieldPlugin::make()` on the same panel. Drop the bare Shield registration; this starter installs Shield via the registry. |
 
 ## Commands reference

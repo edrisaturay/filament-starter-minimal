@@ -22,7 +22,6 @@ class PanelPluginOverride extends Model
         'enabled',
         'options',
         'options_version',
-        'tenant_id',
         'updated_by_user_id',
     ];
 
@@ -56,16 +55,10 @@ class PanelPluginOverride extends Model
                 'before' => $model->wasRecentlyCreated ? null : $model->getOriginal(),
                 'after' => $model->getAttributes(),
             ];
+            $panelId = $model->panel_id;
 
-            $originalTenant = $model->getOriginal('tenant_id');
-            $currentTenant = $model->tenant_id;
-            $currentPanel = $model->panel_id;
-
-            DB::afterCommit(function () use ($payload, $currentPanel, $currentTenant, $originalTenant): void {
-                PluginStateResolver::invalidate($currentPanel, $currentTenant);
-                if ($originalTenant !== $currentTenant) {
-                    PluginStateResolver::invalidate($currentPanel, $originalTenant);
-                }
+            DB::afterCommit(function () use ($payload, $panelId): void {
+                PluginStateResolver::invalidate($panelId);
 
                 try {
                     AuditLog::create($payload);
@@ -83,10 +76,9 @@ class PanelPluginOverride extends Model
                 'before' => $model->getAttributes(),
             ];
             $panelId = $model->panel_id;
-            $tenantId = $model->tenant_id;
 
-            DB::afterCommit(function () use ($payload, $panelId, $tenantId): void {
-                PluginStateResolver::invalidate($panelId, $tenantId);
+            DB::afterCommit(function () use ($payload, $panelId): void {
+                PluginStateResolver::invalidate($panelId);
 
                 try {
                     AuditLog::create($payload);

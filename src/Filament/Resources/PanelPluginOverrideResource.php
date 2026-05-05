@@ -58,9 +58,6 @@ class PanelPluginOverrideResource extends Resource
                     ->helperText('Derived from the plugin registry — cannot be edited from this form.')
                     ->disabled()
                     ->dehydrated(false),
-                Select::make('tenant_id')
-                    ->nullable()
-                    ->hidden(! config('filament-starter-minimal.tenancy.enabled')),
             ]);
     }
 
@@ -75,7 +72,6 @@ class PanelPluginOverrideResource extends Resource
                 IconColumn::make('is_dangerous')
                     ->label('Dangerous')
                     ->boolean(),
-                TextColumn::make('tenant_id')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('panel_id')
@@ -83,9 +79,6 @@ class PanelPluginOverrideResource extends Resource
                 SelectFilter::make('plugin_key')
                     ->options(fn (): array => static::pluginOptions()),
                 TernaryFilter::make('enabled'),
-                SelectFilter::make('tenant_id')
-                    ->options(fn () => PanelPluginOverride::query()->whereNotNull('tenant_id')->distinct()->pluck('tenant_id', 'tenant_id'))
-                    ->hidden(! config('filament-starter-minimal.tenancy.enabled')),
             ])
             ->headerActions([
                 Action::make('sync_plugins')
