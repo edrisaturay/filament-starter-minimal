@@ -1,0 +1,74 @@
+{
+    "name": "edrisaturay/filament-starter-minimal",
+    "description": "Minimal Filament v5 starter plugin: essential panel plugins only (Shield-first, extensible registry).",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Edrisa A Turay",
+            "email": "edrisa@edrisa.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "filament/filament": "^5.0",
+        "illuminate/support": "^12.0",
+        "bezhansalleh/filament-shield": "^4.1"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.0",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0"
+    },
+    "suggest": {
+        "bezhansalleh/filament-panel-switch": "Switch between Filament panels from the topbar.",
+        "bezhansalleh/filament-exceptions": "View Laravel exceptions inside a Filament resource.",
+        "bezhansalleh/filament-language-switch": "Zero-config language switcher for Filament panels.",
+        "jeffgreco13/filament-breezy": "User profile, password reset, and 2FA flows for Filament.",
+        "z3d0x/filament-logger": "Activity logger UI for Filament (uses spatie/laravel-activitylog).",
+        "rawand201/filament-connection-badge": "Show the active database connection in the Filament topbar.",
+        "tomatophp/filament-media-manager": "Full media-manager UI with folders and uploads.",
+        "datlechin/filament-menu-builder": "Drag-and-drop navigation menu builder.",
+        "rupadana/filament-api-service": "Generate REST API endpoints from your Filament resources.",
+        "kenepa/resource-lock": "Prevent two users from editing the same record simultaneously.",
+        "shuvroroy/filament-spatie-laravel-health": "Filament UI for spatie/laravel-health checks.",
+        "shuvroroy/filament-spatie-laravel-backup": "Filament UI for spatie/laravel-backup (backup management).",
+        "charrafimed/global-search-modal": "Replace the Filament global search with a richer modal.",
+        "pxlrbt/filament-spotlight": "Cmd+K spotlight launcher for Filament panels.",
+        "awcodes/filament-quick-create": "Topbar quick-create dropdown for Filament resources.",
+        "a909m/filament-statefusion": "StateFusion plugin for Filament.",
+        "filament/spatie-laravel-media-library-plugin": "Filament form components for spatie/laravel-medialibrary (component package — used inside resources, not registered as a panel plugin).",
+        "filament/spatie-laravel-settings-plugin": "Settings pages backed by spatie/laravel-settings (component package).",
+        "filament/spatie-laravel-tags-plugin": "Filament form components for spatie/laravel-tags (component package).",
+        "riodwanto/filament-ace-editor": "Ace code-editor form field for Filament (component package).",
+        "ralphjsmit/laravel-filament-components": "Collection of handy Filament form/table components (component package).",
+        "stechstudio/filament-impersonate": "Impersonate users — adds Table/Page actions, not a panel plugin (component package).",
+        "ysfkaya/filament-phone-input": "International phone-number form field (component package).",
+        "owen-it/laravel-auditing": "Eloquent auditing trait — wire into your models, not registered as a Filament plugin."
+    },
+    "autoload": {
+        "psr-4": {
+            "EdrisaTuray\\FilamentStarterMinimal\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "EdrisaTuray\\FilamentStarterMinimal\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "EdrisaTuray\\FilamentStarterMinimal\\FilamentStarterMinimalServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
