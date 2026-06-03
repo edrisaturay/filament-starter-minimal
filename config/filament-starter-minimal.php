@@ -22,6 +22,7 @@ return [
     */
     'managed_panels' => [
         'admin',
+        'knowledge-base',
     ],
 
     /*
@@ -34,6 +35,20 @@ return [
             'filament-shield' => [
                 'enabled' => true,
                 'options' => [],
+            ],
+            'filament-knowledge-base-companion' => [
+                'enabled' => false,
+                'options' => [
+                    'knowledge_base_panel_id' => 'knowledge-base',
+                ],
+            ],
+        ],
+        'knowledge-base' => [
+            'filament-knowledge-base' => [
+                'enabled' => true,
+                'options' => [
+                    'knowledge_base_panel_id' => 'knowledge-base',
+                ],
             ],
         ],
     ],

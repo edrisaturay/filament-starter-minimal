@@ -2,12 +2,15 @@
 
 namespace EdrisaTuray\FilamentStarterMinimal\Commands;
 
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Models\PanelPluginOverride;
 use EdrisaTuray\FilamentStarterMinimal\Registry\PluginDefinition;
 use EdrisaTuray\FilamentStarterMinimal\Support\PanelSnapshotManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
+use Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider;
+use Spatie\Health\HealthServiceProvider;
 
 use function Laravel\Prompts\multiselect;
 
@@ -132,6 +135,10 @@ class MinimalStarterInstallCommand extends Command
 
             $installCommand = $this->pluginsWithInstallCommand()[$key] ?? null;
             if ($installCommand !== null) {
+                if (! $this->canRunPluginInstallCommand($key)) {
+                    continue;
+                }
+
                 $this->info("Running {$definition->label} install ({$installCommand})...");
                 $this->call($installCommand);
 
@@ -319,6 +326,7 @@ class MinimalStarterInstallCommand extends Command
             'shuvroroy/filament-spatie-laravel-health' => 'filament-spatie-laravel-health-config',
             'shuvroroy/filament-spatie-laravel-backup' => 'filament-spatie-laravel-backup-translations',
             'jeffgreco13/filament-breezy' => 'filament-breezy-config',
+            'guava/filament-knowledge-base' => 'filament-knowledge-base-config',
         ];
     }
 
@@ -332,19 +340,19 @@ class MinimalStarterInstallCommand extends Command
                 'label' => 'Filament Breezy',
                 'table' => 'breezy_sessions',
                 'tag' => 'filament-breezy-migrations',
-                'provider' => class_exists(\Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider::class)
-                    ? \Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider::class
+                'provider' => class_exists(FilamentBreezyServiceProvider::class)
+                    ? FilamentBreezyServiceProvider::class
                     : null,
                 'migration_glob' => '*_create_breezy_sessions_table.php',
             ],
         ];
 
-        if (class_exists(\Spatie\Health\HealthServiceProvider::class)) {
+        if (class_exists(HealthServiceProvider::class)) {
             $publishers['filament-spatie-health'] = [
                 'label' => 'Spatie Health',
                 'table' => 'health_check_result_history_items',
                 'tag' => 'health-migrations',
-                'provider' => \Spatie\Health\HealthServiceProvider::class,
+                'provider' => HealthServiceProvider::class,
                 'migration_glob' => '*_create_health_tables.php',
             ];
         }
@@ -354,7 +362,16 @@ class MinimalStarterInstallCommand extends Command
 
     protected function setupShield(): void
     {
-        if (! class_exists(\BezhanSalleh\FilamentShield\FilamentShieldPlugin::class)) {
+        if (! class_exists(FilamentShieldPlugin::class)) {
+            return;
+        }
+
+        if (! $this->userModelSupportsRoles()) {
+            $this->warn(
+                'Skipping Filament Shield setup because the configured user model does not support roles. '.
+                'Add Spatie\\Permission\\Traits\\HasRoles to your user model, then run shield:install / shield:setup manually.'
+            );
+
             return;
         }
 
@@ -385,6 +402,36 @@ class MinimalStarterInstallCommand extends Command
     protected function hasTableForMigration(string $table): bool
     {
         return Schema::hasTable($table);
+    }
+
+    protected function canRunPluginInstallCommand(string $pluginKey): bool
+    {
+        if ($pluginKey !== 'filament-shield') {
+            return true;
+        }
+
+        if ($this->userModelSupportsRoles()) {
+            return true;
+        }
+
+        $this->warn(
+            'Skipping Filament Shield install because the configured user model does not support roles. '.
+            'Add Spatie\\Permission\\Traits\\HasRoles to your user model, then rerun minimal-starter:install or shield:install.'
+        );
+
+        return false;
+    }
+
+    protected function userModelSupportsRoles(): bool
+    {
+        $userModel = config('auth.providers.users.model');
+
+        if (! is_string($userModel) || $userModel === '' || ! class_exists($userModel)) {
+            return false;
+        }
+
+        return method_exists($userModel, 'assignRole')
+            && method_exists($userModel, 'hasRole');
     }
 
     /**

@@ -266,10 +266,38 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-spatie-health` | `shuvroroy/filament-spatie-laravel-health` | UI for `spatie/laravel-health`. |
 | `filament-spatie-backup` | `shuvroroy/filament-spatie-laravel-backup` | UI for `spatie/laravel-backup`. |
 | `filament-global-search-modal` | `charrafimed/global-search-modal` | Richer global search UI. |
+| `filament-knowledge-base` | `guava/filament-knowledge-base` | Markdown docs panel (`KnowledgeBasePlugin`). Enable on your `knowledge-base` panel id only. |
+| `filament-knowledge-base-companion` | `guava/filament-knowledge-base` | Links admin (and other) panels to the KB (`KnowledgeBaseCompanionPlugin`). |
 | `filament-spotlight` | `pxlrbt/filament-spotlight` | ⌘K spotlight launcher. |
 | `filament-quick-create` | `awcodes/filament-quick-create` | Topbar quick-create dropdown. Options: `excludes`, `includes`, `sort_by`. |
 
 Run `php artisan minimal-starter:doctor` after `composer require` to confirm the class autoloads — if a vendor renames their plugin class between versions, override the entry via `withPlugin()` (next section).
+
+### Knowledge Base (Guava)
+
+This package **requires** `guava/filament-knowledge-base` ^3.x (Filament v5). You need **two** Filament panels:
+
+1. A dedicated **knowledge-base** panel with `KnowledgeBasePlugin` (registry key `filament-knowledge-base`).
+2. Your main panel(s) with `KnowledgeBaseCompanionPlugin` (registry key `filament-knowledge-base-companion`).
+
+Defaults in the published config enable the KB plugin on `knowledge-base` and leave the companion **off** on `admin` until you toggle it in Plugin Management or `plugin_defaults`.
+
+After install:
+
+```bash
+php artisan filament:assets
+npm install -D @tailwindcss/typography   # if not already present
+```
+
+In **each** custom Filament theme used by the KB panel and companion panel(s), add:
+
+```css
+@plugin "@tailwindcss/typography";
+@source '../../../../vendor/guava/filament-knowledge-base/src/**/*';
+@source '../../../../vendor/guava/filament-knowledge-base/resources/views/**/*';
+```
+
+Store markdown under `docs/{panel-id}/{locale}/` and scaffold pages with `php artisan docs:make`.
 
 ## Companion packages (not panel plugins)
 

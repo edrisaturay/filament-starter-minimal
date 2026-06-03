@@ -301,6 +301,78 @@ class DefaultPluginCatalog
             ),
 
             new PluginDefinition(
+                key: 'filament-knowledge-base',
+                label: 'Knowledge Base (documentation panel)',
+                installer: function (Panel $panel, array $options): Panel {
+                    $knowledgeBasePanelId = $options['knowledge_base_panel_id'] ?? 'knowledge-base';
+
+                    if ($panel->getId() !== $knowledgeBasePanelId) {
+                        return $panel;
+                    }
+
+                    $class = '\\Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBasePlugin';
+                    if (class_exists($class)) {
+                        $panel->plugin($class::make());
+                    }
+
+                    return $panel;
+                },
+                defaultOptions: [
+                    'knowledge_base_panel_id' => 'knowledge-base',
+                ],
+                class: 'Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBasePlugin',
+                package: 'guava/filament-knowledge-base',
+            ),
+
+            new PluginDefinition(
+                key: 'filament-knowledge-base-companion',
+                label: 'Knowledge Base Companion',
+                installer: function (Panel $panel, array $options): Panel {
+                    $knowledgeBasePanelId = $options['knowledge_base_panel_id'] ?? 'knowledge-base';
+
+                    if ($panel->getId() === $knowledgeBasePanelId) {
+                        return $panel;
+                    }
+
+                    $class = '\\Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBaseCompanionPlugin';
+                    if (! class_exists($class)) {
+                        return $panel;
+                    }
+
+                    $plugin = $class::make()->knowledgeBasePanelId($knowledgeBasePanelId);
+
+                    if (($options['modal_previews'] ?? false) && method_exists($plugin, 'modalPreviews')) {
+                        $plugin->modalPreviews();
+                    }
+
+                    if (($options['slide_over_previews'] ?? false) && method_exists($plugin, 'slideOverPreviews')) {
+                        $plugin->slideOverPreviews();
+                    }
+
+                    if (($options['modal_title_breadcrumbs'] ?? false) && method_exists($plugin, 'modalTitleBreadcrumbs')) {
+                        $plugin->modalTitleBreadcrumbs();
+                    }
+
+                    if (($options['open_documentation_in_new_tab'] ?? false) && method_exists($plugin, 'openDocumentationInNewTab')) {
+                        $plugin->openDocumentationInNewTab();
+                    }
+
+                    $panel->plugin($plugin);
+
+                    return $panel;
+                },
+                defaultOptions: [
+                    'knowledge_base_panel_id' => 'knowledge-base',
+                    'modal_previews' => false,
+                    'slide_over_previews' => false,
+                    'modal_title_breadcrumbs' => false,
+                    'open_documentation_in_new_tab' => false,
+                ],
+                class: 'Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBaseCompanionPlugin',
+                package: 'guava/filament-knowledge-base',
+            ),
+
+            new PluginDefinition(
                 key: 'filament-quick-create',
                 label: 'Quick Create',
                 installer: function (Panel $panel, array $options): Panel {
