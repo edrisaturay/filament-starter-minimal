@@ -23,7 +23,8 @@
         "illuminate/support": "^11.28|^12.0|^13.0",
         "jeffgreco13/filament-breezy": "^3.2.5",
         "shuvroroy/filament-spatie-laravel-backup": "^3.4.0",
-        "shuvroroy/filament-spatie-laravel-health": "^3.3.0"
+        "shuvroroy/filament-spatie-laravel-health": "^3.3.0",
+        "stechstudio/filament-impersonate": "^5.0"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0|^10.0|^11.0",
@@ -44,7 +45,6 @@
         "filament/spatie-laravel-tags-plugin": "Filament form components for spatie/laravel-tags (component package).",
         "riodwanto/filament-ace-editor": "Ace code-editor form field for Filament (component package).",
         "ralphjsmit/laravel-filament-components": "Collection of handy Filament form/table components (component package).",
-        "stechstudio/filament-impersonate": "Impersonate users — adds Table/Page actions, not a panel plugin (component package).",
         "ysfkaya/filament-phone-input": "International phone-number form field (component package).",
         "owen-it/laravel-auditing": "Eloquent auditing trait — wire into your models, not registered as a Filament plugin."
     },

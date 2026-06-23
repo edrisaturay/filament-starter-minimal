@@ -301,14 +301,37 @@ Store markdown under `docs/{panel-id}/{locale}/` and scaffold pages with `php ar
 
 ## Companion packages (not panel plugins)
 
-These packages don't implement Filament's `Plugin` contract — they ship **form components**, **traits**, or **settings pages** you compose into your own Resources. They're not in the registry; install them as needed:
+These packages don't implement Filament's `Plugin` contract — they ship **form components**, **traits**, or **action classes** you compose into your own Resources. They're not in the registry. Two of them are bundled as hard dependencies (always installed), the rest are opt-in `composer require`:
 
-- `filament/spatie-laravel-media-library-plugin` — media library form fields
+**Bundled (auto-installed)** — class is autoloadable everywhere this starter runs, but you still wire it into your own Resources:
+
+- `filament/spatie-laravel-media-library-plugin` — media library form fields (use inside your Resources via `SpatieMediaLibraryFileUpload::make(...)`)
+- `stechstudio/filament-impersonate` — table/page action class. Add manually to your `UserResource`:
+  ```php
+  // app/Filament/Resources/UserResource.php
+  use STS\FilamentImpersonate\Tables\Actions\Impersonate;
+
+  public static function table(Table $table): Table
+  {
+      return $table->actions([Impersonate::make(), /* ... */]);
+  }
+
+  // app/Filament/Resources/UserResource/Pages/EditUser.php
+  use STS\FilamentImpersonate\Pages\Actions\Impersonate;
+
+  protected function getHeaderActions(): array
+  {
+      return [Impersonate::make()->record($this->getRecord())];
+  }
+  ```
+  If your panel uses `->spa()`, also chain `->withoutSpa()` when redirecting outside Filament.
+
+**Optional (`composer require` as needed)**:
+
 - `filament/spatie-laravel-settings-plugin` — Spatie-Settings-backed pages
 - `filament/spatie-laravel-tags-plugin` — tag form components
 - `riodwanto/filament-ace-editor` — Ace code editor form field
 - `ralphjsmit/laravel-filament-components` — assorted helper components
-- `stechstudio/filament-impersonate` — table/page actions for impersonation
 - `ysfkaya/filament-phone-input` — international phone-number form field
 - `owen-it/laravel-auditing` — model trait, not Filament-specific
 
