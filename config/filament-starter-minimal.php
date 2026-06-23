@@ -17,6 +17,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Shipped UserResource (with stechstudio/filament-impersonate wired in).
+    | Set 'enabled' to false (or STARTER_MINIMAL_USER_RESOURCE=false) when the
+    | consuming app already registers its own UserResource on managed panels,
+    | to avoid two resources fighting over /users.
+    |
+    | 'model' = null resolves from config('auth.providers.users.model').
+    |--------------------------------------------------------------------------
+    */
+    'users' => [
+        'enabled' => (bool) env('STARTER_MINIMAL_USER_RESOURCE', true),
+        'model' => env('STARTER_MINIMAL_USER_MODEL'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Panels that use the minimal plugin registry and DB sync
     |--------------------------------------------------------------------------
     */

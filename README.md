@@ -303,28 +303,38 @@ Store markdown under `docs/{panel-id}/{locale}/` and scaffold pages with `php ar
 
 These packages don't implement Filament's `Plugin` contract — they ship **form components**, **traits**, or **action classes** you compose into your own Resources. They're not in the registry. Two of them are bundled as hard dependencies (always installed), the rest are opt-in `composer require`:
 
-**Bundled (auto-installed)** — class is autoloadable everywhere this starter runs, but you still wire it into your own Resources:
+**Bundled (auto-installed)** — class is autoloadable everywhere this starter runs:
 
 - `filament/spatie-laravel-media-library-plugin` — media library form fields (use inside your Resources via `SpatieMediaLibraryFileUpload::make(...)`)
-- `stechstudio/filament-impersonate` — table/page action class. Add manually to your `UserResource`:
+- `stechstudio/filament-impersonate` — table/page action class. Auto-wired into the shipped `UserResource` (see [Shipped UserResource](#shipped-userresource) below). If you ship your own `UserResource`, add manually:
   ```php
-  // app/Filament/Resources/UserResource.php
-  use STS\FilamentImpersonate\Tables\Actions\Impersonate;
+  use STS\FilamentImpersonate\Actions\Impersonate;
 
-  public static function table(Table $table): Table
-  {
-      return $table->actions([Impersonate::make(), /* ... */]);
-  }
+  // In your UserResource::table()
+  $table->recordActions([Impersonate::make(), /* ... */]);
 
-  // app/Filament/Resources/UserResource/Pages/EditUser.php
-  use STS\FilamentImpersonate\Pages\Actions\Impersonate;
-
-  protected function getHeaderActions(): array
-  {
-      return [Impersonate::make()->record($this->getRecord())];
-  }
+  // In your EditUser::getHeaderActions()
+  return [Impersonate::make()->record($this->getRecord())];
   ```
-  If your panel uses `->spa()`, also chain `->withoutSpa()` when redirecting outside Filament.
+  If your panel uses `->spa()`, chain `->withoutSpa()` when redirecting outside Filament.
+
+## Shipped UserResource
+
+The package ships a default `UserResource` (`EdrisaTuray\FilamentStarterMinimal\Filament\Resources\UserResource`) with the Impersonate action pre-wired — so a fresh install gets a working users CRUD with row-level impersonation out of the box.
+
+- **Model** resolves dynamically from `config('filament-starter-minimal.users.model')`, falling back to `config('auth.providers.users.model')` (so `App\Models\User` by default).
+- **Authorization** is left to Laravel policies (Filament Shield generates them automatically when you run `php artisan shield:install`).
+- **Disable** when the consuming app already registers its own UserResource (e.g. `tomatophp/filament-users`):
+  ```env
+  STARTER_MINIMAL_USER_RESOURCE=false
+  ```
+  Or in `config/filament-starter-minimal.php`:
+  ```php
+  'users' => [
+      'enabled' => false,
+      'model' => null,
+  ],
+  ```
 
 **Optional (`composer require` as needed)**:
 

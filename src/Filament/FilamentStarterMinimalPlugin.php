@@ -6,6 +6,7 @@ use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\AuditLogResource;
 use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\PanelPluginOverrideResource;
 use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\PanelSnapshotResource;
+use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\UserResource;
 use EdrisaTuray\FilamentStarterMinimal\Registry\PluginDefinition;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
@@ -34,12 +35,17 @@ class FilamentStarterMinimalPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        $panel
-            ->resources([
-                PanelPluginOverrideResource::class,
-                PanelSnapshotResource::class,
-                AuditLogResource::class,
-            ]);
+        $resources = [
+            PanelPluginOverrideResource::class,
+            PanelSnapshotResource::class,
+            AuditLogResource::class,
+        ];
+
+        if (config('filament-starter-minimal.users.enabled', true)) {
+            $resources[] = UserResource::class;
+        }
+
+        $panel->resources($resources);
 
         PlatformPanelFactory::build($panel, $panel->getId());
     }
