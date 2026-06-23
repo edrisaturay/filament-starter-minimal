@@ -155,7 +155,7 @@ class DefaultPluginCatalog
                 installer: function (Panel $panel, array $options): Panel {
                     // filament-logger has no Plugin class; it auto-registers via service
                     // provider. Consumers must opt the activity resource into the panel.
-                    if (class_exists('\\Z3d0X\\FilamentLogger\\FilamentLoggerServiceProvider')) {
+                    if (class_exists('\\MrAdder\\FilamentLogger\\FilamentLoggerServiceProvider')) {
                         $resource = config('filament-logger.activity_resource');
                         if (is_string($resource) && class_exists($resource)) {
                             $panel->resources([$resource]);
@@ -164,8 +164,8 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
-                class: 'Z3d0X\\FilamentLogger\\FilamentLoggerServiceProvider',
-                package: 'z3d0x/filament-logger',
+                class: 'MrAdder\\FilamentLogger\\FilamentLoggerServiceProvider',
+                package: 'mradder/filament-logger',
             ),
 
             new PluginDefinition(
@@ -184,15 +184,15 @@ class DefaultPluginCatalog
                 key: 'filament-media-manager',
                 label: 'Media Manager',
                 installer: function (Panel $panel, array $options): Panel {
-                    $class = '\\TomatoPHP\\FilamentMediaManager\\FilamentMediaManagerPlugin';
+                    $class = '\\Slimani\\MediaManager\\MediaManagerPlugin';
                     if (class_exists($class)) {
                         $panel->plugin($class::make());
                     }
 
                     return $panel;
                 },
-                class: 'TomatoPHP\\FilamentMediaManager\\FilamentMediaManagerPlugin',
-                package: 'tomatophp/filament-media-manager',
+                class: 'Slimani\\MediaManager\\MediaManagerPlugin',
+                package: 'slimani/filament-media-manager',
             ),
 
             new PluginDefinition(

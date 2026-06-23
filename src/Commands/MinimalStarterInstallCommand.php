@@ -161,8 +161,9 @@ class MinimalStarterInstallCommand extends Command
     {
         return [
             'filament-shield' => 'shield:install',
-            'filament-logger' => 'filament-logger:install',
-            'filament-exceptions' => 'filament-exceptions:install',
+            // mradder/filament-logger uses Spatie's PackageServiceProvider, which
+            // auto-names the install command after the package: `filament-logger`.
+            'filament-logger' => 'filament-logger',
         ];
     }
 
