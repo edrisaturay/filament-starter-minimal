@@ -9,11 +9,14 @@ use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterUpdateCommand;
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Filament\FilamentStarterMinimalPlugin;
 use EdrisaTuray\FilamentStarterMinimal\Registry\DefaultPluginCatalog;
+use EdrisaTuray\FilamentStarterMinimal\Support\MediaManagerBridge;
 use EdrisaTuray\FilamentStarterMinimal\Support\PlatformGate;
 use EdrisaTuray\FilamentStarterMinimal\Support\PluginRegistry;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Slimani\MediaManager\Models\File as SlimaniFile;
+use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 
 class FilamentStarterMinimalServiceProvider extends ServiceProvider
 {
@@ -48,6 +51,8 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
             return method_exists($user, 'hasRole') && $user->hasRole($role);
         });
 
+        $this->registerMediaManagerBridge();
+
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/../config/filament-starter-minimal.php' => config_path('filament-starter-minimal.php'),
@@ -64,5 +69,27 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
                 MinimalStarterSafeModeCommand::class,
             ]);
         }
+    }
+
+    /**
+     * Hook the Spatie ↔ Slimani bridge into the Media model's `created` event.
+     * Skipped silently when either package isn't autoloadable, so the rest of
+     * the starter still boots in slimmer installs.
+     */
+    protected function registerMediaManagerBridge(): void
+    {
+        if (! config('filament-starter-minimal.media_manager_bridge.enabled', true)) {
+            return;
+        }
+
+        if (! class_exists(SpatieMedia::class) || ! class_exists(SlimaniFile::class)) {
+            return;
+        }
+
+        $mediaModel = config('media-library.media_model', SpatieMedia::class);
+
+        $mediaModel::created(function ($media): void {
+            app(MediaManagerBridge::class)->handleMediaCreated($media);
+        });
     }
 }

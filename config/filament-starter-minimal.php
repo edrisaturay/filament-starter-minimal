@@ -32,6 +32,44 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Spatie Media Library ↔ Slimani Media Manager bridge
+    |--------------------------------------------------------------------------
+    | When a Spatie Media row is created on a configured model, mirror it as
+    | a Slimani Media Manager File so the file shows up in the Media Manager
+    | UI organised by folders. Folder hierarchy is:
+    |
+    |   /{parent_property}/{collection_name}/file.ext
+    |
+    | e.g. a SpatieMediaLibraryFileUpload::make('passport') on a User whose
+    | configured folder_property is 'name' lands in /alice/passport/...
+    |
+    | Trade-off: the bridge COPIES the physical file into the Slimani File's
+    | own Spatie media collection. This means 2x storage per uploaded file
+    | (original on User, copy on File). It is the safe choice because moving
+    | the media would break $user->getMedia('passport') and consequently any
+    | Filament form that uses SpatieMediaLibraryFileUpload.
+    |
+    | Bridging is opt-in per model. List a model in 'models' to enable it.
+    |--------------------------------------------------------------------------
+    */
+    'media_manager_bridge' => [
+        'enabled' => (bool) env('STARTER_MINIMAL_MEDIA_BRIDGE', true),
+
+        // Per-model config. Key = FQCN, value = ['folder_property' => 'attribute'].
+        // Models NOT listed here are NOT bridged.
+        'models' => [
+            // 'App\Models\User' => ['folder_property' => 'name'],
+        ],
+
+        // Tried in order when 'folder_property' is unset for a listed model.
+        'default_folder_properties' => ['name', 'title', 'slug', 'username'],
+
+        // Used when none of the above resolve to a non-empty value.
+        'fallback_folder' => 'Uploads',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Panels that use the minimal plugin registry and DB sync
     |--------------------------------------------------------------------------
     */

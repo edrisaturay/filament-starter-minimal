@@ -318,6 +318,55 @@ These packages don't implement Filament's `Plugin` contract — they ship **form
   ```
   If your panel uses `->spa()`, chain `->withoutSpa()` when redirecting outside Filament.
 
+## Spatie Media Library ↔ Slimani Media Manager bridge
+
+The starter ships a bridge that mirrors any Spatie Media Library upload into the Slimani Media Manager so the file shows up in the Media Manager UI under a folder hierarchy.
+
+Folder layout:
+```
+/{parent_property}/{collection_name}/file.ext
+```
+
+For example, a `SpatieMediaLibraryFileUpload::make('passport')` on a `User` whose configured `folder_property` is `name` lands in `/alice/passport/passport.jpg`.
+
+### Configuration
+
+Bridging is **opt-in per model**. Configure it in `config/filament-starter-minimal.php`:
+```php
+'media_manager_bridge' => [
+    'enabled' => env('STARTER_MINIMAL_MEDIA_BRIDGE', true),
+
+    'models' => [
+        \App\Models\User::class => ['folder_property' => 'name'],
+        // \App\Models\Product::class => ['folder_property' => 'slug'],
+    ],
+
+    'default_folder_properties' => ['name', 'title', 'slug', 'username'],
+    'fallback_folder' => 'Uploads',
+],
+```
+
+Models NOT listed under `models` are **not** bridged — the original Spatie upload happens, but no Slimani File row is created.
+
+### How it works
+
+The bridge listens for `Media::created` on the Spatie media model. For each new media row whose owner is a configured model, it:
+
+1. Resolves the parent folder name from the configured `folder_property` (e.g. `'name'`), falling back to `default_folder_properties` in order, then to `fallback_folder`.
+2. Uses `media.collection_name` (`passport`, `id`, etc.) as the sub-folder name.
+3. Creates the folder hierarchy if missing (find-or-create).
+4. Creates a `Slimani\MediaManager\Models\File` row in that sub-folder.
+5. **Copies** the media into the new File's own Spatie media collection.
+6. Creates a `media_attachments` row linking the File polymorphically to the originating model.
+
+### Trade-off: storage is duplicated
+
+The bridge **copies** the physical file (1 file → 2 disk copies). This is intentional: re-attaching the original media to the Slimani File would break `$user->getMedia('passport')`, which is exactly what Filament's `SpatieMediaLibraryFileUpload` calls when rendering the form field.
+
+Copy-and-link keeps both worlds happy: forms keep displaying their uploads, and the Media Manager UI gets a clean folder-organised view.
+
+If the duplication matters for your file sizes, set `STARTER_MINIMAL_MEDIA_BRIDGE=false` and write a thinner bridge tailored to your app.
+
 ## Shipped UserResource
 
 The package ships a default `UserResource` (`EdrisaTuray\FilamentStarterMinimal\Filament\Resources\UserResource`) with the Impersonate action pre-wired — so a fresh install gets a working users CRUD with row-level impersonation out of the box.
