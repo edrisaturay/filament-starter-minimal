@@ -257,6 +257,7 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-exceptions` | `bezhansalleh/filament-exceptions` | Adds an Exceptions resource. |
 | `filament-language-switch` | `bezhansalleh/filament-language-switch` | Configures globally. Pass `options.locales` to set available locales. |
 | `filament-breezy` | `jeffgreco13/filament-breezy` | Profile + 2FA flows. |
+| `filament-auth-designer` | `caresome/filament-auth-designer` | Branded auth pages + theme toggle. Options: `pages`, `theme_toggle`, `media`, `media_position`, `media_size`, `blur`. |
 | `filament-logger` | `z3d0x/filament-logger` | Activity log UI. |
 | `filament-connection-badge` | `rawand201/filament-connection-badge` | DB connection indicator. |
 | `filament-media-manager` | `tomatophp/filament-media-manager` | Folder/file media manager. |

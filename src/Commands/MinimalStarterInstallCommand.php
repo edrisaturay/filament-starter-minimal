@@ -328,6 +328,7 @@ class MinimalStarterInstallCommand extends Command
             'shuvroroy/filament-spatie-laravel-backup' => 'filament-spatie-laravel-backup-translations',
             'jeffgreco13/filament-breezy' => 'filament-breezy-config',
             'guava/filament-knowledge-base' => 'filament-knowledge-base-config',
+            'achyutn/filament-log-viewer' => 'filament-log-viewer-config',
         ];
     }
 

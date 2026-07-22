@@ -150,6 +150,70 @@ class DefaultPluginCatalog
             ),
 
             new PluginDefinition(
+                key: 'filament-auth-designer',
+                label: 'Auth Designer (branded auth pages)',
+                installer: function (Panel $panel, array $options): Panel {
+                    $class = '\\Caresome\\FilamentAuthDesigner\\AuthDesignerPlugin';
+                    if (! class_exists($class)) {
+                        return $panel;
+                    }
+
+                    $plugin = $class::make();
+
+                    $position = self::resolveMediaPosition($options['media_position'] ?? null);
+                    $media = $options['media'] ?? null;
+                    $mediaSize = $options['media_size'] ?? null;
+                    $blur = $options['blur'] ?? null;
+
+                    $configure = function ($config) use ($media, $position, $mediaSize, $blur) {
+                        if ($media !== null && method_exists($config, 'media')) {
+                            $config->media(asset($media));
+                        }
+                        if ($position !== null && method_exists($config, 'mediaPosition')) {
+                            $config->mediaPosition($position);
+                        }
+                        if ($mediaSize !== null && method_exists($config, 'mediaSize')) {
+                            $config->mediaSize($mediaSize);
+                        }
+                        if ($blur !== null && method_exists($config, 'blur')) {
+                            $config->blur((int) $blur);
+                        }
+
+                        return $config;
+                    };
+
+                    if ($media !== null && method_exists($plugin, 'defaults')) {
+                        $plugin->defaults($configure);
+                    }
+
+                    $pages = is_array($options['pages'] ?? null) ? $options['pages'] : ['login'];
+                    foreach ($pages as $page) {
+                        if (is_string($page) && method_exists($plugin, $page)) {
+                            $plugin->{$page}();
+                        }
+                    }
+
+                    if (($options['theme_toggle'] ?? true) && method_exists($plugin, 'themeToggle')) {
+                        $plugin->themeToggle();
+                    }
+
+                    $panel->plugin($plugin);
+
+                    return $panel;
+                },
+                defaultOptions: [
+                    'theme_toggle' => true,
+                    'pages' => ['login', 'registration', 'passwordReset', 'emailVerification'],
+                    'media' => null,
+                    'media_position' => 'Cover',
+                    'media_size' => null,
+                    'blur' => null,
+                ],
+                class: 'Caresome\\FilamentAuthDesigner\\AuthDesignerPlugin',
+                package: 'caresome/filament-auth-designer',
+            ),
+
+            new PluginDefinition(
                 key: 'filament-logger',
                 label: 'Activity Logger',
                 installer: function (Panel $panel, array $options): Panel {
@@ -373,6 +437,60 @@ class DefaultPluginCatalog
             ),
 
             new PluginDefinition(
+                key: 'filament-log-viewer',
+                label: 'Log Viewer',
+                installer: function (Panel $panel, array $options): Panel {
+                    $class = '\\AchyutN\\FilamentLogViewer\\FilamentLogViewer';
+                    if (! class_exists($class)) {
+                        return $panel;
+                    }
+
+                    $plugin = $class::make();
+
+                    if (isset($options['authorize']) && method_exists($plugin, 'authorize')) {
+                        $plugin->authorize($options['authorize']);
+                    }
+                    if (isset($options['register_navigation']) && method_exists($plugin, 'registerNavigation')) {
+                        $plugin->registerNavigation((bool) $options['register_navigation']);
+                    }
+                    if (isset($options['navigation_group']) && method_exists($plugin, 'navigationGroup')) {
+                        $plugin->navigationGroup($options['navigation_group']);
+                    }
+                    if (isset($options['navigation_icon']) && method_exists($plugin, 'navigationIcon')) {
+                        $plugin->navigationIcon($options['navigation_icon']);
+                    }
+                    if (isset($options['navigation_label']) && method_exists($plugin, 'navigationLabel')) {
+                        $plugin->navigationLabel($options['navigation_label']);
+                    }
+                    if (isset($options['navigation_sort']) && method_exists($plugin, 'navigationSort')) {
+                        $plugin->navigationSort((int) $options['navigation_sort']);
+                    }
+                    if (isset($options['navigation_url']) && method_exists($plugin, 'navigationUrl')) {
+                        $plugin->navigationUrl($options['navigation_url']);
+                    }
+                    if (array_key_exists('polling_time', $options) && method_exists($plugin, 'pollingTime')) {
+                        $plugin->pollingTime($options['polling_time']);
+                    }
+
+                    $panel->plugin($plugin);
+
+                    return $panel;
+                },
+                defaultOptions: [
+                    'authorize' => true,
+                    'register_navigation' => true,
+                    'navigation_group' => 'System',
+                    'navigation_icon' => 'heroicon-o-document-text',
+                    'navigation_label' => 'Log Viewer',
+                    'navigation_sort' => 10,
+                    'navigation_url' => '/logs',
+                    'polling_time' => null,
+                ],
+                class: 'AchyutN\\FilamentLogViewer\\FilamentLogViewer',
+                package: 'achyutn/filament-log-viewer',
+            ),
+
+            new PluginDefinition(
                 key: 'filament-quick-create',
                 label: 'Quick Create',
                 installer: function (Panel $panel, array $options): Panel {
@@ -406,5 +524,26 @@ class DefaultPluginCatalog
                 package: 'awcodes/filament-quick-create',
             ),
         ];
+    }
+
+    /**
+     * Map a case-insensitive position name (Left/Right/Top/Bottom/Cover) to the
+     * vendor's MediaPosition enum case, or null when unset / unresolvable.
+     */
+    private static function resolveMediaPosition(?string $position): ?object
+    {
+        $enum = '\\Caresome\\FilamentAuthDesigner\\Enums\\MediaPosition';
+
+        if ($position === null || ! enum_exists($enum)) {
+            return null;
+        }
+
+        foreach ($enum::cases() as $case) {
+            if (strcasecmp($case->name, $position) === 0) {
+                return $case;
+            }
+        }
+
+        return null;
     }
 }
