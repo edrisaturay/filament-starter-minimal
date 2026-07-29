@@ -162,8 +162,8 @@ class MinimalStarterInstallCommand extends Command
         return [
             'filament-shield' => 'shield:install',
             // mradder/filament-logger uses Spatie's PackageServiceProvider, which
-            // auto-names the install command after the package: `filament-logger`.
-            'filament-logger' => 'filament-logger',
+            // exposes an install command named `{package-name}:install`.
+            'filament-logger' => 'filament-logger:install',
         ];
     }
 
@@ -326,7 +326,7 @@ class MinimalStarterInstallCommand extends Command
             'charrafimed/global-search-modal' => 'global-search-modal-config',
             'shuvroroy/filament-spatie-laravel-health' => 'filament-spatie-laravel-health-config',
             'shuvroroy/filament-spatie-laravel-backup' => 'filament-spatie-laravel-backup-translations',
-            'jeffgreco13/filament-breezy' => 'filament-breezy-config',
+            'caresome/filament-auth-designer' => 'auth-designer-config',
             'guava/filament-knowledge-base' => 'filament-knowledge-base-config',
             'achyutn/filament-log-viewer' => 'filament-log-viewer-config',
         ];
