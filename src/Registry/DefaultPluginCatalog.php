@@ -491,6 +491,37 @@ class DefaultPluginCatalog
             ),
 
             new PluginDefinition(
+                key: 'filament-impersonate',
+                label: 'Impersonate (user impersonation)',
+                installer: function (Panel $panel, array $options): Panel {
+                    // stechstudio/filament-impersonate exposes no Filament Plugin class.
+                    // It auto-registers via its service provider and ships an
+                    // Impersonate action + <x-impersonate::banner/> blade component.
+                    // Consumers wire STS\FilamentImpersonate\Actions\Impersonate into
+                    // their UserResource table/header actions manually — this entry
+                    // is informational so the plugin appears in the managed catalog.
+                    return $panel;
+                },
+                class: 'STS\\FilamentImpersonate\\FilamentImpersonateServiceProvider',
+                package: 'stechstudio/filament-impersonate',
+            ),
+
+            new PluginDefinition(
+                key: 'filament-uni-file-manager',
+                label: 'Uni File Manager',
+                installer: function (Panel $panel, array $options): Panel {
+                    $class = '\\UniFileManager\\FilamentFileManager\\FilamentFileManagerPlugin';
+                    if (class_exists($class)) {
+                        $panel->plugin($class::make());
+                    }
+
+                    return $panel;
+                },
+                class: 'UniFileManager\\FilamentFileManager\\FilamentFileManagerPlugin',
+                package: 'unifilemanager/filament-file-manager',
+            ),
+
+            new PluginDefinition(
                 key: 'filament-quick-create',
                 label: 'Quick Create',
                 installer: function (Panel $panel, array $options): Panel {

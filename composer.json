@@ -33,7 +33,8 @@
         "shuvroroy/filament-spatie-laravel-backup": "^3.4.0",
         "shuvroroy/filament-spatie-laravel-health": "^3.3.0",
         "slimani/filament-media-manager": "^0.13",
-        "stechstudio/filament-impersonate": "^5.0"
+        "stechstudio/filament-impersonate": "^5.0",
+        "unifilemanager/filament-file-manager": "^0.7.2"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0|^10.0|^11.0",
