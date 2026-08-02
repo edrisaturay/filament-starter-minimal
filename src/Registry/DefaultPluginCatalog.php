@@ -3,6 +3,7 @@
 namespace EdrisaTuray\FilamentStarterMinimal\Registry;
 
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
+use EdrisaTuray\FilamentStarterMinimal\Support\PluginStateResolver;
 use Filament\Panel;
 
 /**
@@ -400,6 +401,20 @@ class DefaultPluginCatalog
 
                     $class = '\\Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBaseCompanionPlugin';
                     if (! class_exists($class)) {
+                        return $panel;
+                    }
+
+                    // Guard: only register the companion when the target KB panel is
+                    // managed AND has the main KB plugin enabled. Otherwise the
+                    // companion's help-menu Livewire component crashes with
+                    // "getPlugin() on null" when it tries to resolve the KB panel.
+                    $managedPanels = config('filament-starter-minimal.managed_panels', []);
+                    if (! in_array($knowledgeBasePanelId, $managedPanels, true)) {
+                        return $panel;
+                    }
+
+                    $kbStates = PluginStateResolver::resolve($knowledgeBasePanelId);
+                    if (empty($kbStates['filament-knowledge-base']['enabled'])) {
                         return $panel;
                     }
 

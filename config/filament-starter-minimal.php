@@ -11,6 +11,18 @@ return [
     */
     'safe_mode' => (bool) env('STARTER_MINIMAL_SAFE_MODE', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Auto-register the panel plugin
+    |--------------------------------------------------------------------------
+    | When true (default), FilamentStarterMinimalPlugin is automatically added
+    | to every panel listed in `managed_panels` — consumers do not need to
+    | include it manually in their PanelProvider's ->plugins([...]) array.
+    | Set to false to opt out and register the plugin manually.
+    |--------------------------------------------------------------------------
+    */
+    'auto_register_panel_plugin' => (bool) env('STARTER_MINIMAL_AUTO_REGISTER', true),
+
     'superadmin' => [
         'role' => 'super_admin',
     ],
