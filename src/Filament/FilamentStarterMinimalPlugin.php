@@ -7,12 +7,22 @@ use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\AuditLogResource;
 use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\PanelPluginOverrideResource;
 use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\PanelSnapshotResource;
 use EdrisaTuray\FilamentStarterMinimal\Filament\Resources\UserResource;
+use EdrisaTuray\FilamentStarterMinimal\Registry\DefaultPluginCatalog;
 use EdrisaTuray\FilamentStarterMinimal\Registry\PluginDefinition;
+use EdrisaTuray\FilamentStarterMinimal\Support\PluginStateResolver;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 
 /**
  * Panel plugin: minimal registry + platform resources (plugin management, snapshots, audit).
+ *
+ * Registering this on a panel installs every enabled plugin in the registry —
+ * which, by default, is every plugin in DefaultPluginCatalog whose composer
+ * package is installed. There is no auto-registration: a panel that omits this
+ * from ->plugins([...]) gets none of the stack, which is how you end up with
+ * Filament's "Plugin [x] is not registered for panel [y]" when a sibling panel
+ * does register it (Filament resolves plugins off the *default* panel while
+ * building routes).
  *
  * Usage:
  *   ->plugins([
@@ -35,19 +45,37 @@ class FilamentStarterMinimalPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
+        $panelId = $panel->getId();
+
         $resources = [
             PanelPluginOverrideResource::class,
             PanelSnapshotResource::class,
             AuditLogResource::class,
         ];
 
-        if (config('filament-starter-minimal.users.enabled', true)) {
+        if ($this->shouldRegisterUserResource($panelId)) {
             $resources[] = UserResource::class;
         }
 
         $panel->resources($resources);
 
-        PlatformPanelFactory::build($panel, $panel->getId());
+        PlatformPanelFactory::build($panel, $panelId, force: true);
+    }
+
+    /**
+     * The shipped UserResource stands down when tomatophp/filament-users is
+     * installing its own — both cover the same model, so registering both
+     * collides on slug and navigation.
+     */
+    protected function shouldRegisterUserResource(string $panelId): bool
+    {
+        if (! config('filament-starter-minimal.users.enabled', true)) {
+            return false;
+        }
+
+        return ! DefaultPluginCatalog::claimsUserResource(
+            PluginStateResolver::resolve($panelId),
+        );
     }
 
     public function boot(Panel $panel): void

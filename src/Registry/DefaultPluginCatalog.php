@@ -9,7 +9,12 @@ use Filament\Panel;
 /**
  * Ships the default catalog of Filament panel plugins this starter knows about.
  * Every installer is class_exists-guarded so the package can list a plugin
- * without forcing the consumer to composer-require it. Class names below are
+ * without forcing the consumer to composer-require it — which is why every
+ * definition ships `defaultEnabled: true`: adding
+ * FilamentStarterMinimalPlugin::make() to a panel installs the whole stack that
+ * is actually present, and entries whose package is missing no-op. Turn
+ * individual plugins off per panel via `plugin_defaults` config or the
+ * PanelPluginOverride table. Class names below are
  * the canonical ones at time of writing — if a vendor renames their plugin
  * class, override that entry via FilamentStarterMinimalPlugin::withPlugin().
  */
@@ -65,6 +70,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'BezhanSalleh\\PanelSwitch\\PanelSwitch',
                 package: 'bezhansalleh/filament-panel-switch',
             ),
@@ -80,6 +86,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'BezhanSalleh\\FilamentExceptions\\FilamentExceptionsPlugin',
                 package: 'bezhansalleh/filament-exceptions',
             ),
@@ -99,6 +106,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 defaultOptions: ['locales' => ['en']],
                 class: 'BezhanSalleh\\LanguageSwitch\\LanguageSwitch',
                 package: 'bezhansalleh/filament-language-switch',
@@ -137,6 +145,8 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
+                dangerousToDisable: true,
                 defaultOptions: [
                     'my_profile' => true,
                     'two_factor' => true,
@@ -202,6 +212,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 defaultOptions: [
                     'theme_toggle' => true,
                     'pages' => ['login', 'registration', 'passwordReset', 'emailVerification'],
@@ -229,6 +240,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'MrAdder\\FilamentLogger\\FilamentLoggerServiceProvider',
                 package: 'mradder/filament-logger',
             ),
@@ -241,6 +253,7 @@ class DefaultPluginCatalog
                     // provider. Toggling at the panel level is informational only.
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'Rawand\\FilamentConnectionBadge\\FilamentConnectionBadgeServiceProvider',
                 package: 'rawand201/filament-connection-badge',
             ),
@@ -256,6 +269,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'Slimani\\MediaManager\\MediaManagerPlugin',
                 package: 'slimani/filament-media-manager',
             ),
@@ -271,6 +285,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'Datlechin\\FilamentMenuBuilder\\FilamentMenuBuilderPlugin',
                 package: 'datlechin/filament-menu-builder',
             ),
@@ -286,6 +301,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'Rupadana\\ApiService\\ApiServicePlugin',
                 package: 'rupadana/filament-api-service',
             ),
@@ -301,6 +317,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'Kenepa\\ResourceLock\\ResourceLockPlugin',
                 package: 'kenepa/resource-lock',
             ),
@@ -316,6 +333,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'ShuvroRoy\\FilamentSpatieLaravelHealth\\FilamentSpatieLaravelHealthPlugin',
                 package: 'shuvroroy/filament-spatie-laravel-health',
             ),
@@ -331,6 +349,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'ShuvroRoy\\FilamentSpatieLaravelBackup\\FilamentSpatieLaravelBackupPlugin',
                 package: 'shuvroroy/filament-spatie-laravel-backup',
             ),
@@ -346,6 +365,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'CharrafiMed\\GlobalSearchModal\\GlobalSearchModalPlugin',
                 package: 'charrafimed/global-search-modal',
             ),
@@ -361,6 +381,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'pxlrbt\\FilamentSpotlight\\SpotlightPlugin',
                 package: 'pxlrbt/filament-spotlight',
             ),
@@ -382,6 +403,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 defaultOptions: [
                     'knowledge_base_panel_id' => 'knowledge-base',
                 ],
@@ -440,6 +462,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 defaultOptions: [
                     'knowledge_base_panel_id' => 'knowledge-base',
                     'modal_previews' => false,
@@ -491,6 +514,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 defaultOptions: [
                     'authorize' => true,
                     'register_navigation' => true,
@@ -506,22 +530,6 @@ class DefaultPluginCatalog
             ),
 
             new PluginDefinition(
-                key: 'filament-impersonate',
-                label: 'Impersonate (user impersonation)',
-                installer: function (Panel $panel, array $options): Panel {
-                    // stechstudio/filament-impersonate exposes no Filament Plugin class.
-                    // It auto-registers via its service provider and ships an
-                    // Impersonate action + <x-impersonate::banner/> blade component.
-                    // Consumers wire STS\FilamentImpersonate\Actions\Impersonate into
-                    // their UserResource table/header actions manually — this entry
-                    // is informational so the plugin appears in the managed catalog.
-                    return $panel;
-                },
-                class: 'STS\\FilamentImpersonate\\FilamentImpersonateServiceProvider',
-                package: 'stechstudio/filament-impersonate',
-            ),
-
-            new PluginDefinition(
                 key: 'filament-uni-file-manager',
                 label: 'Uni File Manager',
                 installer: function (Panel $panel, array $options): Panel {
@@ -532,6 +540,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 class: 'UniFileManager\\FilamentFileManager\\FilamentFileManagerPlugin',
                 package: 'unifilemanager/filament-file-manager',
             ),
@@ -561,6 +570,7 @@ class DefaultPluginCatalog
 
                     return $panel;
                 },
+                defaultEnabled: true,
                 defaultOptions: [
                     'excludes' => [],
                     'includes' => [],
@@ -569,7 +579,67 @@ class DefaultPluginCatalog
                 class: 'Awcodes\\QuickCreate\\QuickCreatePlugin',
                 package: 'awcodes/filament-quick-create',
             ),
+
+            new PluginDefinition(
+                key: 'filament-users',
+                label: 'User Management (users, roles, impersonation)',
+                installer: function (Panel $panel, array $options): Panel {
+                    $class = '\\TomatoPHP\\FilamentUsers\\FilamentUsersPlugin';
+                    if (! class_exists($class)) {
+                        return $panel;
+                    }
+
+                    $plugin = $class::make();
+
+                    // These toggles are backed by static properties on the vendor
+                    // plugin, so the last managed panel to install wins for every
+                    // panel. Vary them per panel only if you accept that.
+                    if (isset($options['avatar']) && method_exists($plugin, 'useAvatar')) {
+                        $plugin->useAvatar((bool) $options['avatar']);
+                    }
+                    if (isset($options['user_resource']) && method_exists($plugin, 'useUserResource')) {
+                        $plugin->useUserResource((bool) $options['user_resource']);
+                    }
+                    if (isset($options['teams_resource']) && method_exists($plugin, 'useTeamsResource')) {
+                        $plugin->useTeamsResource((bool) $options['teams_resource']);
+                    }
+
+                    $panel->plugin($plugin);
+
+                    return $panel;
+                },
+                defaultEnabled: true,
+                defaultOptions: [
+                    'avatar' => false,
+                    'user_resource' => true,
+                    'teams_resource' => true,
+                ],
+                class: 'TomatoPHP\\FilamentUsers\\FilamentUsersPlugin',
+                package: 'tomatophp/filament-users',
+            ),
         ];
+    }
+
+    /**
+     * Whether the bundled user-management plugin will claim the panel's user
+     * resource, in which case the starter's own UserResource must stand down —
+     * two resources over the same model collide on slug and navigation.
+     *
+     * @param  array<string, array{enabled: bool, options: array<string, mixed>}>  $states
+     */
+    public static function claimsUserResource(array $states): bool
+    {
+        $state = $states['filament-users'] ?? null;
+
+        if ($state === null || ! $state['enabled']) {
+            return false;
+        }
+
+        if (! class_exists('TomatoPHP\\FilamentUsers\\FilamentUsersPlugin')) {
+            return false;
+        }
+
+        return (bool) ($state['options']['user_resource'] ?? true);
     }
 
     /**

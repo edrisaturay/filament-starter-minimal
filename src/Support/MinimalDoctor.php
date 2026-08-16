@@ -78,14 +78,15 @@ class MinimalDoctor
                 continue;
             }
 
-            $results[] = $this->guarded("Plugin dependency: {$key}", function () use ($key, $class, $definition): array {
+            $results[] = $this->guarded("Plugin dependency: {$key}", function () use ($class, $definition): array {
                 if (class_exists($class)) {
                     return ['ok', "Class {$class} is autoloadable."];
                 }
 
-                // Default-enabled missing class = the user expected this and got nothing → critical.
-                // Default-disabled missing class = it's just an opt-in available in the catalog → info.
-                $status = $definition->defaultEnabled ? 'critical' : 'info';
+                // Every definition is default-enabled, so a missing class only
+                // means the optional package isn't installed — informational,
+                // unless the plugin is one the starter treats as load-bearing.
+                $status = $definition->dangerousToDisable ? 'critical' : 'info';
 
                 return [
                     $status,

@@ -8,11 +8,22 @@ use Filament\Panel;
 
 class PlatformPanelFactory
 {
-    public static function build(Panel $panel, string $panelId): Panel
+    /**
+     * Install every enabled registry plugin into the panel.
+     *
+     * @param  bool  $force  Skip the `managed_panels` check. Registering
+     *                       FilamentStarterMinimalPlugin on a panel is itself an
+     *                       explicit request to manage it, so the plugin passes
+     *                       true — otherwise a panel missing from
+     *                       `managed_panels` would silently get no plugins at
+     *                       all, which surfaces later as Filament's
+     *                       "Plugin [x] is not registered for panel [y]".
+     */
+    public static function build(Panel $panel, string $panelId, bool $force = false): Panel
     {
         $managedPanels = config('filament-starter-minimal.managed_panels', []);
 
-        if (! in_array($panelId, $managedPanels, true)) {
+        if (! $force && ! in_array($panelId, $managedPanels, true)) {
             return $panel;
         }
 

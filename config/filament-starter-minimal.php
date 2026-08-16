@@ -11,28 +11,21 @@ return [
     */
     'safe_mode' => (bool) env('STARTER_MINIMAL_SAFE_MODE', false),
 
-    /*
-    |--------------------------------------------------------------------------
-    | Auto-register the panel plugin
-    |--------------------------------------------------------------------------
-    | When true (default), FilamentStarterMinimalPlugin is automatically added
-    | to every panel listed in `managed_panels` — consumers do not need to
-    | include it manually in their PanelProvider's ->plugins([...]) array.
-    | Set to false to opt out and register the plugin manually.
-    |--------------------------------------------------------------------------
-    */
-    'auto_register_panel_plugin' => (bool) env('STARTER_MINIMAL_AUTO_REGISTER', true),
-
     'superadmin' => [
         'role' => 'super_admin',
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Shipped UserResource (with stechstudio/filament-impersonate wired in).
+    | Shipped UserResource (with edrisaturay/filament-users' ImpersonateAction wired in).
     | Set 'enabled' to false (or STARTER_MINIMAL_USER_RESOURCE=false) when the
     | consuming app already registers its own UserResource on managed panels,
     | to avoid two resources fighting over /users.
+    |
+    | The bundled `filament-users` plugin (tomatophp/filament-users) ships its
+    | own user resource and is enabled by default, so this one stands down
+    | automatically — no need to flip the flag for that case. Disable the
+    | `filament-users` plugin for a panel to get this resource back.
     |
     | 'model' = null resolves from config('auth.providers.users.model').
     |--------------------------------------------------------------------------
@@ -84,6 +77,13 @@ return [
     |--------------------------------------------------------------------------
     | Panels that use the minimal plugin registry and DB sync
     |--------------------------------------------------------------------------
+    | Add `FilamentStarterMinimalPlugin::make()` to a panel's ->plugins([...])
+    | to install the stack; that registration is what drives everything, and it
+    | works on any panel whether or not it appears below. This list is what the
+    | plugin-sync/snapshot/doctor commands walk, and what cross-panel installers
+    | (e.g. the Knowledge Base companion) consult, so keep every panel that
+    | registers the plugin listed here.
+    |--------------------------------------------------------------------------
     */
     'managed_panels' => [
         'admin',
@@ -94,6 +94,12 @@ return [
     |--------------------------------------------------------------------------
     | Per-panel plugin defaults (merged with DB overrides)
     |--------------------------------------------------------------------------
+    | Every plugin in the registry ships `defaultEnabled: true`, so a managed
+    | panel gets the full stack from `FilamentStarterMinimalPlugin::make()`
+    | alone — installers are class_exists-guarded, so entries whose composer
+    | package isn't installed silently no-op. Only list a key below when you
+    | need to deviate from the registry default (or to pin options).
+    |--------------------------------------------------------------------------
     */
     'plugin_defaults' => [
         'admin' => [
@@ -102,7 +108,7 @@ return [
                 'options' => [],
             ],
             'filament-knowledge-base-companion' => [
-                'enabled' => false,
+                'enabled' => true,
                 'options' => [
                     'knowledge_base_panel_id' => 'knowledge-base',
                 ],

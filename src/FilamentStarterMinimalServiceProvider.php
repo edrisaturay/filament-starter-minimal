@@ -12,7 +12,6 @@ use EdrisaTuray\FilamentStarterMinimal\Registry\DefaultPluginCatalog;
 use EdrisaTuray\FilamentStarterMinimal\Support\MediaManagerBridge;
 use EdrisaTuray\FilamentStarterMinimal\Support\PlatformGate;
 use EdrisaTuray\FilamentStarterMinimal\Support\PluginRegistry;
-use Filament\Panel;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -46,8 +45,6 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
-        $this->autoRegisterPanelPlugin();
-
         Gate::define(PlatformGate::MANAGE_PLATFORM, function (Authenticatable $user): bool {
             $role = config('filament-starter-minimal.superadmin.role', 'super_admin');
 
@@ -72,42 +69,6 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
                 MinimalStarterSafeModeCommand::class,
             ]);
         }
-    }
-
-    /**
-     * Auto-register the FilamentStarterMinimalPlugin into every managed panel
-     * without requiring consumers to add it manually to their PanelProvider.
-     *
-     * Consumers can opt out globally by setting
-     * `filament-starter-minimal.auto_register_panel_plugin` to false, or by
-     * limiting via `managed_panels` in config.
-     */
-    protected function autoRegisterPanelPlugin(): void
-    {
-        if (! config('filament-starter-minimal.auto_register_panel_plugin', true)) {
-            return;
-        }
-
-        if (! class_exists(Panel::class)) {
-            return;
-        }
-
-        Panel::configureUsing(function (Panel $panel): void {
-            $managedPanels = config('filament-starter-minimal.managed_panels', []);
-
-            if (! empty($managedPanels) && ! in_array($panel->getId(), $managedPanels, true)) {
-                return;
-            }
-
-            $plugin = FilamentStarterMinimalPlugin::make();
-
-            // Avoid double-registration if the consumer also added it manually.
-            if (in_array($plugin, $panel->getPlugins(), true)) {
-                return;
-            }
-
-            $panel->plugin($plugin);
-        });
     }
 
     /**

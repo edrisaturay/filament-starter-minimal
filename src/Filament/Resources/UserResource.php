@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\Hash;
 
 /**
  * Default UserResource shipped with the minimal starter. Wires in the
- * stechstudio/filament-impersonate action automatically. Opt-out via
- * config('filament-starter-minimal.users.enabled') when the consuming
- * app already provides its own UserResource.
+ * edrisaturay/filament-users impersonation action automatically when the
+ * package is installed. Opt-out via config('filament-starter-minimal.users.enabled')
+ * when the consuming app already provides its own UserResource.
  *
  * Model class resolves from filament-starter-minimal.users.model, falling
  * back to auth.providers.users.model so most apps need no configuration.
@@ -80,10 +80,11 @@ class UserResource extends Resource
             DeleteAction::make(),
         ];
 
-        // Class is guaranteed present (hard composer require) but keep the guard
-        // so a consumer removing the package in a fork won't break the resource.
-        $impersonate = '\\STS\\FilamentImpersonate\\Actions\\Impersonate';
-        if (class_exists($impersonate)) {
+        // Use edrisaturay/filament-users' ImpersonateAction (built on
+        // lab404/laravel-impersonate). Guarded so consumers removing that
+        // package in a fork won't break the resource.
+        $impersonate = '\\EdrisaTuray\\FilamentUsers\\Filament\\Resources\\Users\\Tables\\Actions\\ImpersonateAction';
+        if (class_exists($impersonate) && config('filament-users.impersonate.enabled', true)) {
             array_unshift($recordActions, $impersonate::make());
         }
 

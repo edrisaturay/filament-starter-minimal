@@ -2,8 +2,8 @@
 
 use EdrisaTuray\FilamentStarterMinimal\Models\PanelPluginOverride;
 use EdrisaTuray\FilamentStarterMinimal\Support\PluginSyncManager;
-use Filament\Facades\Filament;
 use Filament\Panel;
+use Filament\PanelRegistry;
 
 beforeEach(function (): void {
     config()->set('filament-starter-minimal.managed_panels', ['admin']);
@@ -11,7 +11,13 @@ beforeEach(function (): void {
     // Register a real Filament panel so Filament::getPanels() returns something
     // and sync actually iterates over it. Without this, the legacy version of
     // the test asserted 0 === 0 — a false positive.
-    Filament::registerPanel(
+    //
+    // Registered straight on the registry rather than through
+    // Filament::registerPanel(): that facade method only queues a container
+    // `resolving` callback for PanelRegistry, and FilamentServiceProvider::boot()
+    // has already resolved the singleton by the time this runs, so the callback
+    // would never fire and the panel would be silently dropped.
+    app(PanelRegistry::class)->register(
         Panel::make()->id('admin')->path('admin'),
     );
 });

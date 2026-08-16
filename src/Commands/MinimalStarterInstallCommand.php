@@ -329,6 +329,7 @@ class MinimalStarterInstallCommand extends Command
             'caresome/filament-auth-designer' => 'auth-designer-config',
             'guava/filament-knowledge-base' => 'filament-knowledge-base-config',
             'achyutn/filament-log-viewer' => 'filament-log-viewer-config',
+            'tomatophp/filament-users' => 'filament-users-config',
         ];
     }
 

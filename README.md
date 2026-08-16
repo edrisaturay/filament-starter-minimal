@@ -132,6 +132,10 @@ php artisan migrate
 
 In your `PanelProvider` (or wherever you configure the panel), add **one** plugin entry. Do **not** also register `FilamentShieldPlugin::make()` separately unless you intend to load Shield twice.
 
+Every plugin in the registry ships `defaultEnabled: true`, so this single line installs the whole stack — each installer is `class_exists`-guarded, so entries whose composer package isn't installed silently no-op. Turn individual plugins off per panel via `plugin_defaults` config or the **Plugin Management** UI.
+
+There is **no** auto-registration: a panel that omits this line gets none of the stack. Add it to **every** panel, not just one — Filament resolves plugins off the *default* panel while building routes, so a page contributed by a plugin on panel B (e.g. Breezy's `MyProfilePage`) will throw `Plugin [x] is not registered for panel [A]` when the default panel A is missing that plugin.
+
 ```php
 use EdrisaTuray\FilamentStarterMinimal\Filament\FilamentStarterMinimalPlugin;
 use Filament\Panel;
@@ -150,10 +154,10 @@ public function panel(Panel $panel): Panel
 
 Edit `config/filament-starter-minimal.php` (or the merged defaults):
 
-- Set **`managed_panels`** to every Filament **panel id** that should use the registry and receive registry-driven plugins (e.g. `['admin', 'staff']`).
-- Under **`plugin_defaults`**, add a block for **each** of those panel IDs and each **plugin key** returned by `PluginRegistry::getPlugins()` (see [Extending the registry](#extending-the-registry)).
+- Set **`managed_panels`** to every Filament **panel id** that registers `FilamentStarterMinimalPlugin` (e.g. `['admin', 'staff']`).
+- Under **`plugin_defaults`**, add a block only for the panel/plugin combinations that should **deviate** from the registry default (or that need pinned options). Anything you leave out falls back to the definition's `defaultEnabled` / `defaultOptions`.
 
-If a panel’s id is **not** in `managed_panels`, `PlatformPanelFactory` will **not** attach registry plugins to that panel (but the Filament resources are still registered on whichever panels load `FilamentStarterMinimalPlugin`—restrict access with policies / `canViewAny()` as needed).
+`managed_panels` does **not** gate plugin installation — registering the plugin does that, on any panel. The list is what the sync / snapshot / doctor commands walk, and what cross-panel installers (e.g. the Knowledge Base companion) consult, so a panel that registers the plugin but is missing from the list will work but stay invisible to those tools.
 
 ### 3. Seed snapshots and plugin override rows
 
@@ -258,9 +262,9 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-language-switch` | `bezhansalleh/filament-language-switch` | Configures globally. Pass `options.locales` to set available locales. |
 | `filament-breezy` | `jeffgreco13/filament-breezy` | Profile + 2FA flows. |
 | `filament-auth-designer` | `caresome/filament-auth-designer` | Branded auth pages + theme toggle. Options: `pages`, `theme_toggle`, `media`, `media_position`, `media_size`, `blur`. |
-| `filament-logger` | `z3d0x/filament-logger` | Activity log UI. |
+| `filament-logger` | `mradder/filament-logger` | Activity log UI. |
 | `filament-connection-badge` | `rawand201/filament-connection-badge` | DB connection indicator. |
-| `filament-media-manager` | `tomatophp/filament-media-manager` | Folder/file media manager. |
+| `filament-media-manager` | `slimani/filament-media-manager` | Folder/file media manager. |
 | `filament-menu-builder` | `datlechin/filament-menu-builder` | Drag-and-drop navigation builder. |
 | `filament-api-service` | `rupadana/filament-api-service` | Generates REST endpoints from Resources. |
 | `filament-resource-lock` | `kenepa/resource-lock` | Prevents concurrent edits on a resource. |
@@ -271,6 +275,9 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-knowledge-base-companion` | `guava/filament-knowledge-base` | Links admin (and other) panels to the KB (`KnowledgeBaseCompanionPlugin`). |
 | `filament-spotlight` | `pxlrbt/filament-spotlight` | ⌘K spotlight launcher. |
 | `filament-quick-create` | `awcodes/filament-quick-create` | Topbar quick-create dropdown. Options: `excludes`, `includes`, `sort_by`. |
+| `filament-log-viewer` | `achyutn/filament-log-viewer` | Laravel log reader page. Options: `authorize`, `register_navigation`, `navigation_*`, `polling_time`. |
+| `filament-uni-file-manager` | `unifilemanager/filament-file-manager` | Filesystem browser page. |
+| `filament-users` | `tomatophp/filament-users` | User management with Shield roles + impersonation. Options: `avatar`, `user_resource`, `teams_resource` (all backed by **static** properties on the vendor plugin, so the last panel to install wins). Its user resource supersedes this package's shipped `UserResource` — see below. |
 
 Run `php artisan minimal-starter:doctor` after `composer require` to confirm the class autoloads — if a vendor renames their plugin class between versions, override the entry via `withPlugin()` (next section).
 
@@ -307,17 +314,16 @@ These packages don't implement Filament's `Plugin` contract — they ship **form
 **Bundled (auto-installed)** — class is autoloadable everywhere this starter runs:
 
 - `filament/spatie-laravel-media-library-plugin` — media library form fields (use inside your Resources via `SpatieMediaLibraryFileUpload::make(...)`)
-- `stechstudio/filament-impersonate` — table/page action class. Auto-wired into the shipped `UserResource` (see [Shipped UserResource](#shipped-userresource) below). If you ship your own `UserResource`, add manually:
+- `edrisaturay/filament-users` — ships an `ImpersonateAction` (built on `lab404/laravel-impersonate`) that is auto-wired into the shipped `UserResource` (see [Shipped UserResource](#shipped-userresource) below). If you ship your own `UserResource`, add it manually:
   ```php
-  use STS\FilamentImpersonate\Actions\Impersonate;
+  use EdrisaTuray\FilamentUsers\Filament\Resources\Users\Tables\Actions\ImpersonateAction;
 
   // In your UserResource::table()
-  $table->recordActions([Impersonate::make(), /* ... */]);
-
-  // In your EditUser::getHeaderActions()
-  return [Impersonate::make()->record($this->getRecord())];
+  $table->recordActions([ImpersonateAction::make(), /* ... */]);
   ```
-  If your panel uses `->spa()`, chain `->withoutSpa()` when redirecting outside Filament.
+  Toggle globally via `filament-users.impersonate.enabled` in `config/filament-users.php`.
+
+  > Note: `stechstudio/filament-impersonate` was previously bundled but has been removed to avoid two competing impersonation stacks (two banners, conflicting `session('impersonate.*')` semantics). If you were relying on it, `composer require stechstudio/filament-impersonate` yourself and set `filament-users.impersonate.enabled=false`.
 
 ## Spatie Media Library ↔ Slimani Media Manager bridge
 
@@ -370,11 +376,13 @@ If the duplication matters for your file sizes, set `STARTER_MINIMAL_MEDIA_BRIDG
 
 ## Shipped UserResource
 
-The package ships a default `UserResource` (`EdrisaTuray\FilamentStarterMinimal\Filament\Resources\UserResource`) with the Impersonate action pre-wired — so a fresh install gets a working users CRUD with row-level impersonation out of the box.
+The package ships a default `UserResource` (`EdrisaTuray\FilamentStarterMinimal\Filament\Resources\UserResource`) with the Impersonate action pre-wired.
+
+**It stands down by default.** `tomatophp/filament-users` is bundled and enabled, and it registers its own user resource over the same model — two of them would collide on slug and navigation. So on any panel where the `filament-users` plugin is enabled (with `options.user_resource` left on), the shipped resource is skipped automatically; no config flag needed. Disable `filament-users` for a panel — via `plugin_defaults` or the Plugin Management UI — to get the shipped resource back.
 
 - **Model** resolves dynamically from `config('filament-starter-minimal.users.model')`, falling back to `config('auth.providers.users.model')` (so `App\Models\User` by default).
 - **Authorization** is left to Laravel policies (Filament Shield generates them automatically when you run `php artisan shield:install`).
-- **Disable** when the consuming app already registers its own UserResource (e.g. `tomatophp/filament-users`):
+- **Disable** unconditionally when the consuming app registers its own UserResource:
   ```env
   STARTER_MINIMAL_USER_RESOURCE=false
   ```
