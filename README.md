@@ -277,6 +277,7 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-quick-create` | `awcodes/filament-quick-create` | Topbar quick-create dropdown. Options: `excludes`, `includes`, `sort_by`. |
 | `filament-log-viewer` | `achyutn/filament-log-viewer` | Laravel log reader page. Options: `authorize`, `register_navigation`, `navigation_*`, `polling_time`. |
 | `filament-uni-file-manager` | `unifilemanager/filament-file-manager` | Filesystem browser page. |
+| `filament-column-filters` | `zvizvi/filament-column-filters` | Excel-style filter popups in table column headers. No options — enabling it on a panel makes `->columnFilter()` available on that panel's table columns. |
 | `filament-users` | `tomatophp/filament-users` | User management with Shield roles + impersonation. Options: `avatar`, `user_resource`, `teams_resource` (all backed by **static** properties on the vendor plugin, so the last panel to install wins). Its user resource supersedes this package's shipped `UserResource` — see below. |
 
 Run `php artisan minimal-starter:doctor` after `composer require` to confirm the class autoloads — if a vendor renames their plugin class between versions, override the entry via `withPlugin()` (next section).
@@ -306,6 +307,38 @@ In **each** custom Filament theme used by the KB panel and companion panel(s), a
 ```
 
 Store markdown under `docs/{panel-id}/{locale}/` and scaffold pages with `php artisan docs:make`.
+
+### Column Filters (zvizvi)
+
+Enabled by default on every managed panel. Registering it is what makes the
+`columnFilter()` macro available and wires the Livewire listeners that decorate
+table headers — disable the `filament-column-filters` key for a panel and the
+macro stops existing there.
+
+```php
+use Filament\Tables\Columns\TextColumn;
+use Zvizvi\FilamentColumnFilters\Filters\ColumnFilter;
+
+TextColumn::make('name')->columnFilter(ColumnFilter::search()),
+TextColumn::make('created_at')->date()->columnFilter(ColumnFilter::date()),
+TextColumn::make('status')->columnFilter(ColumnFilter::select()->options([...])->multiple()),
+TextColumn::make('amount')->columnFilter(ColumnFilter::range()->step(0.01)),
+```
+
+Each configured column auto-registers a backing table filter (`cf_{column}`), so
+it shows the usual filter indicators without cluttering the filters dropdown. A
+regular filter named like the column (or any `SelectFilter` on the same
+attribute) is synced with automatically; otherwise point at it with
+`->syncWith('filter_name', ['from' => 'created_from', ...])`.
+
+Pages that build their table outside a Livewire request (a custom endpoint
+calling `getTable()` headlessly) need the vendor trait on the page class itself:
+
+```php
+use Zvizvi\FilamentColumnFilters\Concerns\HasColumnFilters;
+```
+
+Translations (en/he) publish with `php artisan vendor:publish --tag=filament-column-filters-translations`.
 
 ## Companion packages (not panel plugins)
 

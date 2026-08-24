@@ -34,7 +34,8 @@
         "shuvroroy/filament-spatie-laravel-health": "^3.3.0",
         "slimani/filament-media-manager": "^0.13",
         "tomatophp/filament-users": "^5.0",
-        "unifilemanager/filament-file-manager": "^0.7.2"
+        "unifilemanager/filament-file-manager": "^0.7.2",
+        "zvizvi/filament-column-filters": "^0.0.6"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0|^10.0|^11.0",

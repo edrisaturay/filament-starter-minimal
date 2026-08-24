@@ -581,6 +581,22 @@ class DefaultPluginCatalog
             ),
 
             new PluginDefinition(
+                key: 'filament-column-filters',
+                label: 'Column Filters (Excel-style table headers)',
+                installer: function (Panel $panel, array $options): Panel {
+                    $class = '\\Zvizvi\\FilamentColumnFilters\\FilamentColumnFiltersPlugin';
+                    if (class_exists($class)) {
+                        $panel->plugin($class::make());
+                    }
+
+                    return $panel;
+                },
+                defaultEnabled: true,
+                class: 'Zvizvi\\FilamentColumnFilters\\FilamentColumnFiltersPlugin',
+                package: 'zvizvi/filament-column-filters',
+            ),
+
+            new PluginDefinition(
                 key: 'filament-users',
                 label: 'User Management (users, roles, impersonation)',
                 installer: function (Panel $panel, array $options): Panel {
