@@ -88,6 +88,7 @@ return [
     'managed_panels' => [
         'admin',
         'knowledge-base',
+        'staff',
     ],
 
     /*
