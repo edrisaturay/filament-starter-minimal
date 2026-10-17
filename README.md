@@ -315,7 +315,7 @@ This package **requires** `guava/filament-knowledge-base` ^3.x (Filament v5). Yo
 1. A dedicated **knowledge-base** panel with `KnowledgeBasePlugin` (registry key `filament-knowledge-base`).
 2. Your main panel(s) with `KnowledgeBaseCompanionPlugin` (registry key `filament-knowledge-base-companion`).
 
-Defaults in the published config enable the KB plugin on `knowledge-base` and leave the companion **off** on `admin` until you toggle it in Plugin Management or `plugin_defaults`.
+`managed_panels` ships as `['admin']`. Once your KB panel exists, add its id (default `knowledge-base`) to `managed_panels`: the companion on `admin` switches on only for a managed KB panel with the KB plugin enabled, and renders nothing while that panel is not registered.
 
 After install:
 
@@ -538,7 +538,7 @@ Calling `sync()` twice in a row is a no-op on the second call — `updateOrCreat
 
 Out of the box, with **zero published config**:
 
-- `managed_panels` is `['admin']` — only a panel with id `admin` receives registry plugins from `PlatformPanelFactory`.
+- `managed_panels` is `['admin']` — the panel list the sync, snapshot and doctor commands walk. Every panel that registers `FilamentStarterMinimalPlugin` still gets its plugins; list each one here so those tools see it.
 - `superadmin.role` is `super_admin` — the role name checked by every Platform resource. **Your User model must have `spatie/laravel-permission`'s `HasRoles` trait** (or another implementation that exposes a `hasRole(string $role)` method), and a role with that name must exist and be assigned. If neither is true, the resources are simply invisible to all users (closed-default).
 - `safe_mode` is `false`.
 - This package is **single-tenant**. The override / snapshot / audit tables key by `panel_id` only. The consumer's individual Filament panels may use Filament tenancy themselves — that's orthogonal.

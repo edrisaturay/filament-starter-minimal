@@ -109,12 +109,14 @@ return [
     | plugin-sync/snapshot/doctor commands walk, and what cross-panel installers
     | (e.g. the Knowledge Base companion) consult, so keep every panel that
     | registers the plugin listed here.
+    |
+    | Add 'knowledge-base' (or your KB panel id) here once that panel exists —
+    | the Knowledge Base companion on other panels only switches on for a
+    | managed KB panel.
     |--------------------------------------------------------------------------
     */
     'managed_panels' => [
         'admin',
-        'knowledge-base',
-        'staff',
     ],
 
     /*
