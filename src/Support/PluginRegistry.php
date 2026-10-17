@@ -82,7 +82,10 @@ class PluginRegistry implements PluginRegistryContract
     {
         $parts = [];
         foreach ($this->definitions as $key => $def) {
-            $parts[] = $key.':'.($def->defaultEnabled ? '1' : '0').':'.($def->dangerousToDisable ? '1' : '0');
+            // defaultOptions is part of the signature so cached state picks up
+            // option defaults added or changed by a package update.
+            $parts[] = $key.':'.($def->defaultEnabled ? '1' : '0').':'.($def->dangerousToDisable ? '1' : '0')
+                .':'.hash('crc32b', (string) json_encode($def->defaultOptions));
         }
         sort($parts);
 

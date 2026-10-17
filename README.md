@@ -20,8 +20,10 @@ These mirror the **full starter** commands with a `minimal-starter:` prefix and 
 ### `minimal-starter:install`
 
 - Optionally publishes config (`--publish-config`, or interactive confirm when not `--no-interaction`).
+- Publishes the configs and migrations of every installed bundled plugin (Shield + Spatie Permission, Activity Log, Media Library, Media Manager, Menu Builder, Exceptions, Breezy, Health, Sanctum, ...) — **before** migrating, so the snapshot never writes to a table that doesn't exist yet.
 - Runs `php artisan migrate --force`.
-- Calls `PanelSnapshotManager::snapshot()` (snapshots + plugin override sync).
+- Calls `PanelSnapshotManager::snapshot()` (snapshots + plugin override sync) and applies per-panel plugin defaults.
+- Runs `shield:generate --all` for every managed panel registered with Filament. It does **not** run `shield:install`, which would inject a second `FilamentShieldPlugin` into your panel provider.
 
 ```bash
 php artisan minimal-starter:install
@@ -173,7 +175,29 @@ Typical places: `AppServiceProvider::boot()` (after Filament is ready), a dedica
 
 ### 4. Filament Shield
 
-Follow Shield’s own docs: run `shield:install`, configure `config/filament-shield.php`, generate permissions, and assign the **super admin** role configured in `filament-starter-minimal.superadmin.role` (default `super_admin`) to users who should access **Platform** resources.
+`minimal-starter:install` publishes Shield's config, creates the permission tables and generates permissions/policies — do **not** run `shield:install` (it registers `FilamentShieldPlugin` on the panel a second time). Assign the **super admin** role configured in `filament-starter-minimal.superadmin.role` (default `super_admin`) to users who should access **Platform** resources:
+
+```bash
+php artisan shield:super-admin --panel=admin
+```
+
+The starter also wires Shield up so every bundled plugin's resources are reachable:
+
+- **Policies for vendor models** (activity log, menus, exceptions, ...) that `shield:generate` writes outside Laravel's policy discovery are registered via `FilamentShield::enforcePolicies()` (`shield.enforce_policies`, default `true`). Some plugins (e.g. filament-logger) hide their resource entirely without a registered policy.
+- **The super admin passes every gate** (`superadmin.bypass_gates`, default `true`) — some bundled plugins ship policies that check permission names Shield never generates (api-service's `TokenPolicy` asks for `view_any_token`). Skipped when Shield's own `super_admin.define_via_gate` is on.
+
+### 5. Breezy two-factor authentication
+
+Breezy's 2FA is enabled only when your user model uses Breezy's trait — without it, every panel request would fail on `hasConfirmedTwoFactor()`:
+
+```php
+use Jeffgreco13\FilamentBreezy\Traits\TwoFactorAuthenticatable;
+
+class User extends Authenticatable
+{
+    use HasRoles, TwoFactorAuthenticatable;
+}
+```
 
 ---
 
@@ -198,6 +222,8 @@ File: `config/filament-starter-minimal.php` (merged as `filament-starter-minimal
 |-----|---------|
 | `safe_mode` | When `true` (or env `STARTER_MINIMAL_SAFE_MODE=true`), dangerous registry plugins are forced on. Usually toggled via `minimal-starter:safe-mode` (cache). |
 | `superadmin.role` | Role name checked by Platform resources (`hasRole()`). Default: `super_admin`. |
+| `superadmin.bypass_gates` | Users with the super-admin role pass every Gate/policy check (env `STARTER_MINIMAL_SUPERADMIN_BYPASS_GATES`). Default: `true`. |
+| `shield.enforce_policies` | Call `FilamentShield::enforcePolicies()` so Shield-generated policies for vendor models are registered (env `STARTER_MINIMAL_SHIELD_ENFORCE_POLICIES`). Default: `true`. |
 | `managed_panels` | Panel IDs that receive **registry** installers via `PlatformPanelFactory`. |
 | `plugin_defaults` | Nested: `panel_id` → `plugin_key` → `enabled`, `options`. Used before DB overrides. |
 
@@ -260,7 +286,7 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-panel-switch` | `bezhansalleh/filament-panel-switch` | Configures globally via `PanelSwitch::configureUsing()`. |
 | `filament-exceptions` | `bezhansalleh/filament-exceptions` | Adds an Exceptions resource. |
 | `filament-language-switch` | `bezhansalleh/filament-language-switch` | Configures globally. Pass `options.locales` to set available locales. |
-| `filament-breezy` | `jeffgreco13/filament-breezy` | Profile + 2FA flows. |
+| `filament-breezy` | `jeffgreco13/filament-breezy` | Profile + 2FA flows. 2FA turns on only when the user model uses `TwoFactorAuthenticatable`. |
 | `filament-auth-designer` | `caresome/filament-auth-designer` | Branded auth pages + theme toggle. Options: `pages`, `theme_toggle`, `media`, `media_position`, `media_size`, `blur`. |
 | `filament-logger` | `mradder/filament-logger` | Activity log UI. |
 | `filament-connection-badge` | `rawand201/filament-connection-badge` | DB connection indicator. |

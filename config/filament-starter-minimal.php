@@ -11,8 +11,34 @@ return [
     */
     'safe_mode' => (bool) env('STARTER_MINIMAL_SAFE_MODE', false),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Super admin
+    |--------------------------------------------------------------------------
+    | 'role' gates the Platform resources. With 'bypass_gates' on, users with
+    | that role pass every Gate/policy check — needed because some bundled
+    | plugins ship policies that check permission names Shield never
+    | generates (e.g. api-service's `view_any_token`). Skipped when Shield's
+    | own `super_admin.define_via_gate` is enabled, which does the same.
+    |--------------------------------------------------------------------------
+    */
     'superadmin' => [
         'role' => 'super_admin',
+        'bypass_gates' => (bool) env('STARTER_MINIMAL_SUPERADMIN_BYPASS_GATES', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filament Shield integration
+    |--------------------------------------------------------------------------
+    | 'enforce_policies' calls FilamentShield::enforcePolicies() so the
+    | policies `shield:generate` writes for vendor models (activity log, menus,
+    | exceptions, ...) are registered — Laravel's discovery cannot find them,
+    | and some plugins hide their resources without one.
+    |--------------------------------------------------------------------------
+    */
+    'shield' => [
+        'enforce_policies' => (bool) env('STARTER_MINIMAL_SHIELD_ENFORCE_POLICIES', true),
     ],
 
     /*

@@ -3,6 +3,7 @@
 namespace EdrisaTuray\FilamentStarterMinimal\Registry;
 
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
+use EdrisaTuray\FilamentStarterMinimal\Filament\Plugins\GuardedKnowledgeBaseCompanionPlugin;
 use EdrisaTuray\FilamentStarterMinimal\Support\PluginStateResolver;
 use Filament\Panel;
 
@@ -131,7 +132,13 @@ class DefaultPluginCatalog
                         );
                     }
 
-                    if (($options['two_factor'] ?? true) && method_exists($plugin, 'enableTwoFactorAuthentication')) {
+                    // Breezy's 2FA middleware calls hasConfirmedTwoFactor() on the
+                    // authenticated user, so enabling it without the
+                    // TwoFactorAuthenticatable trait breaks every panel request.
+                    if (($options['two_factor'] ?? true)
+                        && method_exists($plugin, 'enableTwoFactorAuthentication')
+                        && self::userModelHasMethod('hasConfirmedTwoFactor')
+                    ) {
                         $plugin->enableTwoFactorAuthentication(
                             force: $options['force_two_factor'] ?? false,
                         );
@@ -295,13 +302,24 @@ class DefaultPluginCatalog
                 label: 'API Service',
                 installer: function (Panel $panel, array $options): Panel {
                     $class = '\\Rupadana\\ApiService\\ApiServicePlugin';
-                    if (class_exists($class)) {
-                        $panel->plugin($class::make());
+                    if (! class_exists($class)) {
+                        return $panel;
                     }
+
+                    // The vendor hides its token resource from navigation by
+                    // default; it reads this config key at render time.
+                    if (array_key_exists('token_navigation', $options)) {
+                        config(['api-service.navigation.token.should_register_navigation' => (bool) $options['token_navigation']]);
+                    }
+
+                    $panel->plugin($class::make());
 
                     return $panel;
                 },
                 defaultEnabled: true,
+                defaultOptions: [
+                    'token_navigation' => true,
+                ],
                 class: 'Rupadana\\ApiService\\ApiServicePlugin',
                 package: 'rupadana/filament-api-service',
             ),
@@ -440,7 +458,9 @@ class DefaultPluginCatalog
                         return $panel;
                     }
 
-                    $plugin = $class::make()->knowledgeBasePanelId($knowledgeBasePanelId);
+                    // The guarded subclass also renders nothing at request time
+                    // when the KB panel is managed but never registered.
+                    $plugin = GuardedKnowledgeBaseCompanionPlugin::make()->knowledgeBasePanelId($knowledgeBasePanelId);
 
                     if (($options['modal_previews'] ?? false) && method_exists($plugin, 'modalPreviews')) {
                         $plugin->modalPreviews();
@@ -656,6 +676,17 @@ class DefaultPluginCatalog
         }
 
         return (bool) ($state['options']['user_resource'] ?? true);
+    }
+
+    /**
+     * Whether the configured user model exposes the given method — used to
+     * skip plugin features that require a trait the app has not added yet.
+     */
+    public static function userModelHasMethod(string $method): bool
+    {
+        $model = config('filament-starter-minimal.users.model') ?: config('auth.providers.users.model');
+
+        return is_string($model) && class_exists($model) && method_exists($model, $method);
     }
 
     /**

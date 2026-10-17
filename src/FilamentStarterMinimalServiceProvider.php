@@ -51,6 +51,8 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
             return method_exists($user, 'hasRole') && $user->hasRole($role);
         });
 
+        $this->registerShieldIntegration();
+
         $this->registerMediaManagerBridge();
 
         if ($this->app->runningInConsole()) {
@@ -69,6 +71,38 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
                 MinimalStarterSafeModeCommand::class,
             ]);
         }
+    }
+
+    /**
+     * Wire Shield up so the bundled plugins' resources are actually reachable:
+     *
+     * - `shield:generate` writes policies for vendor models (Activity, Menu,
+     *   Exception, ...) outside Laravel's policy discovery, and some resources
+     *   (e.g. filament-logger's) refuse access outright without a registered
+     *   policy. enforcePolicies() registers those generated policies; explicit
+     *   Gate::policy() registrations still win.
+     * - Some vendor policies check permission names Shield never generates
+     *   (api-service's TokenPolicy asks for `view_any_token`), so the super
+     *   admin is granted every ability up front unless Shield already does so
+     *   via its own `super_admin.define_via_gate`.
+     */
+    protected function registerShieldIntegration(): void
+    {
+        if (config('filament-starter-minimal.shield.enforce_policies', true) && $this->app->bound('filament-shield')) {
+            $this->app->make('filament-shield')->enforcePolicies();
+        }
+
+        if (! config('filament-starter-minimal.superadmin.bypass_gates', true)
+            || config('filament-shield.super_admin.define_via_gate', false)
+        ) {
+            return;
+        }
+
+        Gate::before(function (Authenticatable $user): ?bool {
+            $role = config('filament-starter-minimal.superadmin.role', 'super_admin');
+
+            return method_exists($user, 'hasRole') && $user->hasRole($role) ? true : null;
+        });
     }
 
     /**

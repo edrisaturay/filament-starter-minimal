@@ -7,6 +7,7 @@ use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Models\PanelPluginOverride;
 use EdrisaTuray\FilamentStarterMinimal\Registry\PluginDefinition;
 use EdrisaTuray\FilamentStarterMinimal\Support\PanelSnapshotManager;
+use Filament\Facades\Filament;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 use Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider;
@@ -30,7 +31,21 @@ class MinimalStarterInstallCommand extends Command
         try {
             $this->publishOwnConfig();
 
-            $this->info('Running base migrations...');
+            $available = $this->availablePlugins();
+            $options = collect($available)
+                ->mapWithKeys(fn (PluginDefinition $d, string $key): array => [$key => $d->label])
+                ->all();
+
+            if ($available === []) {
+                $this->warn('No registered plugins are installed. Install the suggested composer packages and re-run.');
+            } else {
+                // Plugin migrations must be published before the first migrate:
+                // the snapshot below writes models that plugins observe (e.g.
+                // filament-logger writes to activity_log on every model event).
+                $this->publishPluginAssets($available, $options);
+            }
+
+            $this->info('Running migrations...');
             $exit = $this->call('migrate', ['--force' => true]);
             if ($exit !== 0) {
                 $this->error('migrate failed with exit code '.$exit);
@@ -41,10 +56,9 @@ class MinimalStarterInstallCommand extends Command
             $this->info('Snapshotting panels and syncing plugin registry rows...');
             PanelSnapshotManager::snapshot();
 
-            $this->configurePlugins();
-
-            $this->info('Running migrations again for any plugin migrations published above...');
-            $this->call('migrate', ['--force' => true]);
+            if ($available !== []) {
+                $this->activatePlugins($available, $options);
+            }
 
             $this->setupShield();
 
@@ -72,33 +86,30 @@ class MinimalStarterInstallCommand extends Command
         }
     }
 
-    protected function configurePlugins(): void
+    /**
+     * @return array<string, PluginDefinition>
+     */
+    protected function availablePlugins(): array
     {
-        /** @var array<string, PluginDefinition> $available */
-        $available = collect(app(PluginRegistryContract::class)->all())
+        return collect(app(PluginRegistryContract::class)->all())
             ->filter(fn (PluginDefinition $d): bool => $d->isAvailable())
             ->all();
+    }
 
-        if ($available === []) {
-            $this->warn('No registered plugins are installed. Install the suggested composer packages and re-run.');
-
-            return;
-        }
-
-        $options = collect($available)
-            ->mapWithKeys(fn (PluginDefinition $d, string $key): array => [$key => $d->label])
-            ->all();
-
-        $this->publishPluginAssets($available, $options);
-
+    /**
+     * @param  array<string, PluginDefinition>  $plugins
+     * @param  array<string, string>  $options
+     */
+    protected function activatePlugins(array $plugins, array $options): void
+    {
         if ($this->option('no-interaction')) {
-            $this->applyDefaultPanelOverrides($available);
+            $this->applyDefaultPanelOverrides($plugins);
 
             return;
         }
 
-        $this->activatePluginsPerPanel($available, $options);
-        $this->markDangerousPlugins($available, $options);
+        $this->activatePluginsPerPanel($plugins, $options);
+        $this->markDangerousPlugins($plugins, $options);
     }
 
     /**
@@ -135,10 +146,6 @@ class MinimalStarterInstallCommand extends Command
 
             $installCommand = $this->pluginsWithInstallCommand()[$key] ?? null;
             if ($installCommand !== null) {
-                if (! $this->canRunPluginInstallCommand($key)) {
-                    continue;
-                }
-
                 $this->info("Running {$definition->label} install ({$installCommand})...");
                 $this->call($installCommand);
 
@@ -155,14 +162,19 @@ class MinimalStarterInstallCommand extends Command
      * registry plugin key and points at an Artisan command that publishes
      * configs/migrations and (where applicable) seeds the package.
      *
+     * Shield is deliberately absent: `shield:install` requires a panel argument
+     * and injects `FilamentShieldPlugin::make()` into the panel provider, which
+     * duplicates the registry's own Shield registration. Its configs and the
+     * permission migrations are published like any other plugin instead.
+     *
      * @return array<string, string>
      */
     protected function pluginsWithInstallCommand(): array
     {
         return [
-            'filament-shield' => 'shield:install',
             // mradder/filament-logger uses Spatie's PackageServiceProvider, which
-            // exposes an install command named `{package-name}:install`.
+            // exposes an install command named `{package-name}:install`. It also
+            // publishes spatie/laravel-activitylog's migrations.
             'filament-logger' => 'filament-logger:install',
         ];
     }
@@ -173,11 +185,14 @@ class MinimalStarterInstallCommand extends Command
             return;
         }
 
-        $tag = $this->configPublishTags()[$definition->package] ?? null;
+        $tags = $this->configPublishTags()[$definition->package] ?? null;
 
-        if ($tag !== null) {
+        if ($tags !== null) {
             $this->info("Publishing config for {$definition->label}...");
-            $this->call('vendor:publish', ['--tag' => $tag]);
+
+            foreach ((array) $tags as $tag) {
+                $this->call('vendor:publish', ['--tag' => $tag]);
+            }
 
             return;
         }
@@ -193,27 +208,23 @@ class MinimalStarterInstallCommand extends Command
 
     protected function publishPluginMigrations(string $key): void
     {
-        $publisher = $this->pluginMigrationPublishers()[$key] ?? null;
+        foreach ($this->pluginMigrationPublishers()[$key] ?? [] as $publisher) {
+            if ($this->hasTableForMigration($publisher['table'])) {
+                continue;
+            }
 
-        if ($publisher === null) {
-            return;
+            if ($this->hasMigrationPublished($publisher['migration_glob'])) {
+                continue;
+            }
+
+            $arguments = ['--tag' => $publisher['tag']];
+            if (! empty($publisher['provider'])) {
+                $arguments['--provider'] = $publisher['provider'];
+            }
+
+            $this->info("Publishing {$publisher['label']} migrations...");
+            $this->call('vendor:publish', $arguments);
         }
-
-        if ($this->hasTableForMigration($publisher['table'])) {
-            return;
-        }
-
-        if ($this->hasMigrationPublished($publisher['migration_glob'])) {
-            return;
-        }
-
-        $arguments = ['--tag' => $publisher['tag']];
-        if (! empty($publisher['provider'])) {
-            $arguments['--provider'] = $publisher['provider'];
-        }
-
-        $this->info("Publishing {$publisher['label']} migrations...");
-        $this->call('vendor:publish', $arguments);
     }
 
     /**
@@ -314,11 +325,12 @@ class MinimalStarterInstallCommand extends Command
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, string|list<string>>
      */
     protected function configPublishTags(): array
     {
         return [
+            'bezhansalleh/filament-shield' => ['filament-shield-config', 'permission-config'],
             'bezhansalleh/filament-language-switch' => 'filament-language-switch-config',
             'bezhansalleh/filament-panel-switch' => 'filament-panel-switch-config',
             'awcodes/filament-quick-create' => 'filament-quick-create-config',
@@ -334,12 +346,22 @@ class MinimalStarterInstallCommand extends Command
     }
 
     /**
-     * @return array<string, array{label: string, table: string, tag: string, provider: ?string, migration_glob: string}>
+     * Migration publishers per registry plugin key. Each publisher is skipped
+     * when its table already exists or its migration was already published.
+     *
+     * @return array<string, list<array{label: string, table: string, tag: string, provider: ?string, migration_glob: string}>>
      */
     protected function pluginMigrationPublishers(): array
     {
         $publishers = [
-            'filament-breezy' => [
+            'filament-shield' => [[
+                'label' => 'Spatie Permission',
+                'table' => config('permission.table_names.roles', 'roles'),
+                'tag' => 'permission-migrations',
+                'provider' => null,
+                'migration_glob' => '*_create_permission_tables.php',
+            ]],
+            'filament-breezy' => [[
                 'label' => 'Filament Breezy',
                 'table' => 'breezy_sessions',
                 'tag' => 'filament-breezy-migrations',
@@ -347,22 +369,64 @@ class MinimalStarterInstallCommand extends Command
                     ? FilamentBreezyServiceProvider::class
                     : null,
                 'migration_glob' => '*_create_breezy_sessions_table.php',
+            ]],
+            'filament-exceptions' => [[
+                'label' => 'Filament Exceptions',
+                'table' => 'filament_exceptions_table',
+                'tag' => 'filament-exceptions-migrations',
+                'provider' => null,
+                'migration_glob' => '*_create_filament_exceptions_table.php',
+            ]],
+            'filament-menu-builder' => [[
+                'label' => 'Filament Menu Builder',
+                'table' => config('filament-menu-builder.tables.menus', 'menus'),
+                'tag' => 'filament-menu-builder-migrations',
+                'provider' => null,
+                'migration_glob' => '*_create_menus_table.php',
+            ]],
+            'filament-media-manager' => [
+                [
+                    'label' => 'Spatie Media Library',
+                    'table' => 'media',
+                    'tag' => 'medialibrary-migrations',
+                    'provider' => null,
+                    'migration_glob' => '*_create_media_table.php',
+                ],
+                [
+                    'label' => 'Media Manager',
+                    'table' => 'media_folders',
+                    'tag' => 'media-manager-migrations',
+                    'provider' => null,
+                    'migration_glob' => '*_create_media_manager_tables.php',
+                ],
             ],
+            'filament-api-service' => [[
+                'label' => 'Laravel Sanctum',
+                'table' => 'personal_access_tokens',
+                'tag' => 'sanctum-migrations',
+                'provider' => null,
+                'migration_glob' => '*_create_personal_access_tokens_table.php',
+            ]],
         ];
 
         if (class_exists(HealthServiceProvider::class)) {
-            $publishers['filament-spatie-health'] = [
+            $publishers['filament-spatie-health'] = [[
                 'label' => 'Spatie Health',
                 'table' => 'health_check_result_history_items',
                 'tag' => 'health-migrations',
                 'provider' => HealthServiceProvider::class,
                 'migration_glob' => '*_create_health_tables.php',
-            ];
+            ]];
         }
 
         return $publishers;
     }
 
+    /**
+     * Generates Shield permissions and policies for every managed panel that is
+     * registered with Filament. Configs and permission tables are already in
+     * place at this point (published with the plugin assets, then migrated).
+     */
     protected function setupShield(): void
     {
         if (! class_exists(FilamentShieldPlugin::class)) {
@@ -372,7 +436,7 @@ class MinimalStarterInstallCommand extends Command
         if (! $this->userModelSupportsRoles()) {
             $this->warn(
                 'Skipping Filament Shield setup because the configured user model does not support roles. '.
-                'Add Spatie\\Permission\\Traits\\HasRoles to your user model, then run shield:install / shield:setup manually.'
+                'Add Spatie\\Permission\\Traits\\HasRoles to your user model, then rerun minimal-starter:install.'
             );
 
             return;
@@ -381,15 +445,39 @@ class MinimalStarterInstallCommand extends Command
         $this->newLine();
         $this->info('--- Filament Shield Setup ---');
 
-        if ($this->option('no-interaction')) {
-            return;
+        $panelIds = $this->registeredManagedPanelIds();
+
+        foreach ($panelIds as $panelId) {
+            $this->info("Generating Shield permissions and policies for the '{$panelId}' panel...");
+            $this->call('shield:generate', [
+                '--all' => true,
+                '--panel' => $panelId,
+                '--option' => 'policies_and_permissions',
+                '--no-interaction' => true,
+            ]);
         }
 
-        $this->call('shield:setup');
+        $this->line(
+            'Policies generated for vendor models (Role, AuditLog, ...) are outside Laravel\'s policy discovery. '.
+            'Register them by calling FilamentShield::enforcePolicies() in a service provider\'s boot().'
+        );
 
-        if ($this->confirm('Create a Shield super admin role now?', true)) {
-            $this->call('shield:super-admin');
+        if ($panelIds !== [] && ! $this->option('no-interaction') && $this->confirm('Assign the Shield super admin role to a user now?', true)) {
+            $this->call('shield:super-admin', ['--panel' => $panelIds[0]]);
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function registeredManagedPanelIds(): array
+    {
+        $registered = array_keys(Filament::getPanels());
+
+        return array_values(array_filter(
+            config('filament-starter-minimal.managed_panels', []),
+            fn (string $panelId): bool => in_array($panelId, $registered, true),
+        ));
     }
 
     protected function hasMigrationPublished(string $pattern): bool
@@ -405,24 +493,6 @@ class MinimalStarterInstallCommand extends Command
     protected function hasTableForMigration(string $table): bool
     {
         return Schema::hasTable($table);
-    }
-
-    protected function canRunPluginInstallCommand(string $pluginKey): bool
-    {
-        if ($pluginKey !== 'filament-shield') {
-            return true;
-        }
-
-        if ($this->userModelSupportsRoles()) {
-            return true;
-        }
-
-        $this->warn(
-            'Skipping Filament Shield install because the configured user model does not support roles. '.
-            'Add Spatie\\Permission\\Traits\\HasRoles to your user model, then rerun minimal-starter:install or shield:install.'
-        );
-
-        return false;
     }
 
     protected function userModelSupportsRoles(): bool
