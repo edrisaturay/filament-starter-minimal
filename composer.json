@@ -15,7 +15,6 @@
         "illuminate/contracts": "^11.28|^12.0|^13.0",
         "illuminate/database": "^11.28|^12.0|^13.0",
         "illuminate/support": "^11.28|^12.0|^13.0",
-        "a909m/filament-statefusion": "^2.3.0",
         "bezhansalleh/filament-language-switch": "^4.3.0",
         "bezhansalleh/filament-panel-switch": "^3.1.0",
         "bezhansalleh/filament-shield": "^4.2.0",
@@ -30,6 +29,7 @@
         "pestphp/pest-plugin-laravel": "^4.0"
     },
     "suggest": {
+        "a909m/filament-statefusion": "Optional state management components for Filament. Install ^2.3 separately when required.",
         "bezhansalleh/filament-exceptions": "View Laravel exceptions inside a Filament resource.",
         "z3d0x/filament-logger": "Activity logger UI for Filament (uses spatie/laravel-activitylog).",
         "rawand201/filament-connection-badge": "Show the active database connection in the Filament topbar.",
