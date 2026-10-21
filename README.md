@@ -297,8 +297,7 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-spatie-health` | `shuvroroy/filament-spatie-laravel-health` | UI for `spatie/laravel-health`. |
 | `filament-spatie-backup` | `shuvroroy/filament-spatie-laravel-backup` | UI for `spatie/laravel-backup`. |
 | `filament-global-search-modal` | `charrafimed/global-search-modal` | Richer global search UI. |
-| `filament-knowledge-base` | `guava/filament-knowledge-base` | Markdown docs panel (`KnowledgeBasePlugin`). Enable on your `knowledge-base` panel id only. |
-| `filament-knowledge-base-companion` | `guava/filament-knowledge-base` | Links admin (and other) panels to the KB (`KnowledgeBaseCompanionPlugin`). |
+| `filament-knowledge-base` | `guava/filament-knowledge-base` | One Knowledge Base option: documentation plugin on the configured KB panel, companion on other panels. |
 | `filament-spotlight` | `pxlrbt/filament-spotlight` | ⌘K spotlight launcher. |
 | `filament-quick-create` | `awcodes/filament-quick-create` | Topbar quick-create dropdown. Options: `excludes`, `includes`, `sort_by`. |
 | `filament-log-viewer` | `achyutn/filament-log-viewer` | Laravel log reader page. Options: `authorize`, `register_navigation`, `navigation_*`, `polling_time`. |
@@ -313,7 +312,9 @@ Run `php artisan minimal-starter:doctor` after `composer require` to confirm the
 This package **requires** `guava/filament-knowledge-base` ^3.x (Filament v5). You need **two** Filament panels:
 
 1. A dedicated **knowledge-base** panel with `KnowledgeBasePlugin` (registry key `filament-knowledge-base`).
-2. Your main panel(s) with `KnowledgeBaseCompanionPlugin` (registry key `filament-knowledge-base-companion`).
+2. Your main panel(s) with the companion, selected automatically by the same `filament-knowledge-base` option.
+
+Both use one registry entry and one installer checkbox. Companion preview options remain available on that entry. Existing custom configuration using `filament-knowledge-base-companion` should use `filament-knowledge-base` instead.
 
 `managed_panels` ships as `['admin']`. Once your KB panel exists, add its id (default `knowledge-base`) to `managed_panels`: the companion on `admin` switches on only for a managed KB panel with the KB plugin enabled, and renders nothing while that panel is not registered.
 
@@ -373,16 +374,15 @@ These packages don't implement Filament's `Plugin` contract — they ship **form
 **Bundled (auto-installed)** — class is autoloadable everywhere this starter runs:
 
 - `filament/spatie-laravel-media-library-plugin` — media library form fields (use inside your Resources via `SpatieMediaLibraryFileUpload::make(...)`)
-- `edrisaturay/filament-users` — ships an `ImpersonateAction` (built on `lab404/laravel-impersonate`) that is auto-wired into the shipped `UserResource` (see [Shipped UserResource](#shipped-userresource) below). If you ship your own `UserResource`, add it manually:
+- `stechstudio/filament-impersonate`: used by the TomatoPHP Users resource, published Users resource, and starter fallback resource. The starter action restricts impersonation to the configured super admin role and redirects within the current panel. STS supplies the leave banner and restores the original admin session.
+
   ```php
-  use EdrisaTuray\FilamentUsers\Filament\Resources\Users\Tables\Actions\ImpersonateAction;
+  use EdrisaTuray\FilamentStarterMinimal\Filament\Actions\Impersonate;
 
-  // In your UserResource::table()
-  $table->recordActions([ImpersonateAction::make(), /* ... */]);
+  $table->recordActions([Impersonate::make(), /* ... */]);
   ```
-  Toggle globally via `filament-users.impersonate.enabled` in `config/filament-users.php`.
 
-  > Note: `stechstudio/filament-impersonate` was previously bundled but has been removed to avoid two competing impersonation stacks (two banners, conflicting `session('impersonate.*')` semantics). If you were relying on it, `composer require stechstudio/filament-impersonate` yourself and set `filament-users.impersonate.enabled=false`.
+  TomatoPHP's built-in impersonation action and banner hook are disabled by the starter to avoid session conflicts. Publish STS settings with `php artisan vendor:publish --tag=filament-impersonate-config`.
 
 ## Spatie Media Library ↔ Slimani Media Manager bridge
 

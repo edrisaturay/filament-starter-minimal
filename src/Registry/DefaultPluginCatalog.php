@@ -406,36 +406,16 @@ class DefaultPluginCatalog
 
             new PluginDefinition(
                 key: 'filament-knowledge-base',
-                label: 'Knowledge Base (documentation panel)',
-                installer: function (Panel $panel, array $options): Panel {
-                    $knowledgeBasePanelId = $options['knowledge_base_panel_id'] ?? 'knowledge-base';
-
-                    if ($panel->getId() !== $knowledgeBasePanelId) {
-                        return $panel;
-                    }
-
-                    $class = '\\Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBasePlugin';
-                    if (class_exists($class)) {
-                        $panel->plugin($class::make());
-                    }
-
-                    return $panel;
-                },
-                defaultEnabled: true,
-                defaultOptions: [
-                    'knowledge_base_panel_id' => 'knowledge-base',
-                ],
-                class: 'Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBasePlugin',
-                package: 'guava/filament-knowledge-base',
-            ),
-
-            new PluginDefinition(
-                key: 'filament-knowledge-base-companion',
-                label: 'Knowledge Base Companion',
+                label: 'Knowledge Base',
                 installer: function (Panel $panel, array $options): Panel {
                     $knowledgeBasePanelId = $options['knowledge_base_panel_id'] ?? 'knowledge-base';
 
                     if ($panel->getId() === $knowledgeBasePanelId) {
+                        $class = '\\Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBasePlugin';
+                        if (class_exists($class)) {
+                            $panel->plugin($class::make());
+                        }
+
                         return $panel;
                     }
 
@@ -490,7 +470,7 @@ class DefaultPluginCatalog
                     'modal_title_breadcrumbs' => false,
                     'open_documentation_in_new_tab' => false,
                 ],
-                class: 'Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBaseCompanionPlugin',
+                class: 'Guava\\FilamentKnowledgeBase\\Plugins\\KnowledgeBasePlugin',
                 package: 'guava/filament-knowledge-base',
             ),
 
@@ -638,6 +618,12 @@ class DefaultPluginCatalog
                     }
                     if (isset($options['teams_resource']) && method_exists($plugin, 'useTeamsResource')) {
                         $plugin->useTeamsResource((bool) $options['teams_resource']);
+                    }
+
+                    $resource = 'App\\Filament\\Resources\\Users\\UserResource';
+                    if (($options['user_resource'] ?? true) && class_exists($resource)) {
+                        $plugin->useUserResource(false);
+                        $panel->resources([$resource]);
                     }
 
                     $panel->plugin($plugin);

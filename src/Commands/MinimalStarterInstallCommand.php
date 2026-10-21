@@ -2,16 +2,16 @@
 
 namespace EdrisaTuray\FilamentStarterMinimal\Commands;
 
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Models\PanelPluginOverride;
 use EdrisaTuray\FilamentStarterMinimal\Registry\PluginDefinition;
 use EdrisaTuray\FilamentStarterMinimal\Support\PanelSnapshotManager;
-use Filament\Facades\Filament;
+use EdrisaTuray\FilamentStarterMinimal\Support\UserModelRolesSetup;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
 use Jeffgreco13\FilamentBreezy\FilamentBreezyServiceProvider;
 use Spatie\Health\HealthServiceProvider;
+use Symfony\Component\Process\Process;
 
 use function Laravel\Prompts\multiselect;
 
@@ -26,10 +26,22 @@ class MinimalStarterInstallCommand extends Command
 
     public function handle(): int
     {
-        $this->info('Filament Starter Minimal — install');
+        $this->info('Filament Starter Minimal: install');
 
         try {
+            $model = config('filament-starter-minimal.users.model') ?: config('auth.providers.users.model');
+            if (! is_string($model) || $model === '') {
+                throw new \RuntimeException('Configure a valid user model before installing.');
+            }
+
+            if (app(UserModelRolesSetup::class)->ensure($model)) {
+                $this->info("Added HasRoles to {$model}. Restarting installation to load the updated model...");
+
+                return $this->restartInstallation();
+            }
+
             $this->publishOwnConfig();
+            $this->publishStarterAssets();
 
             $available = $this->availablePlugins();
             $options = collect($available)
@@ -72,6 +84,27 @@ class MinimalStarterInstallCommand extends Command
 
             return self::FAILURE;
         }
+    }
+
+    protected function restartInstallation(): int
+    {
+        $arguments = [PHP_BINARY, '-d', 'opcache.enable_cli=0', base_path('artisan'), 'minimal-starter:install'];
+
+        foreach ($this->options() as $name => $value) {
+            if ($value === true) {
+                $arguments[] = '--'.$name;
+            } elseif ($value !== false && $value !== null) {
+                foreach ((array) $value as $item) {
+                    $arguments[] = '--'.$name.'='.$item;
+                }
+            }
+        }
+
+        $process = new Process($arguments, base_path());
+        $process->setTimeout(null);
+        $process->setInput(STDIN);
+
+        return $process->run(fn (string $type, string $buffer) => $this->output->write($buffer));
     }
 
     protected function publishOwnConfig(): void
@@ -429,55 +462,30 @@ class MinimalStarterInstallCommand extends Command
      */
     protected function setupShield(): void
     {
-        if (! class_exists(FilamentShieldPlugin::class)) {
-            return;
-        }
-
         if (! $this->userModelSupportsRoles()) {
-            $this->warn(
-                'Skipping Filament Shield setup because the configured user model does not support roles. '.
-                'Add Spatie\\Permission\\Traits\\HasRoles to your user model, then rerun minimal-starter:install.'
-            );
-
-            return;
+            throw new \RuntimeException('Add Spatie\\Permission\\Traits\\HasRoles to the configured user model before installing.');
         }
 
-        $this->newLine();
-        $this->info('--- Filament Shield Setup ---');
+        foreach (['ShieldSeeder', 'UserSeeder'] as $seeder) {
+            $class = 'Database\\Seeders\\'.$seeder;
 
-        $panelIds = $this->registeredManagedPanelIds();
+            if (! class_exists($class)) {
+                require_once database_path('seeders/'.$seeder.'.php');
+            }
 
-        foreach ($panelIds as $panelId) {
-            $this->info("Generating Shield permissions and policies for the '{$panelId}' panel...");
-            $this->call('shield:generate', [
-                '--all' => true,
-                '--panel' => $panelId,
-                '--option' => 'policies_and_permissions',
-                '--no-interaction' => true,
-            ]);
-        }
-
-        $this->line(
-            'Policies generated for vendor models (Role, AuditLog, ...) are outside Laravel\'s policy discovery. '.
-            'Register them by calling FilamentShield::enforcePolicies() in a service provider\'s boot().'
-        );
-
-        if ($panelIds !== [] && ! $this->option('no-interaction') && $this->confirm('Assign the Shield super admin role to a user now?', true)) {
-            $this->call('shield:super-admin', ['--panel' => $panelIds[0]]);
+            if ($this->call('db:seed', ['--class' => $class, '--force' => true]) !== self::SUCCESS) {
+                throw new \RuntimeException("{$seeder} failed.");
+            }
         }
     }
 
-    /**
-     * @return list<string>
-     */
-    protected function registeredManagedPanelIds(): array
+    protected function publishStarterAssets(): void
     {
-        $registered = array_keys(Filament::getPanels());
-
-        return array_values(array_filter(
-            config('filament-starter-minimal.managed_panels', []),
-            fn (string $panelId): bool => in_array($panelId, $registered, true),
-        ));
+        foreach (['filament-starter-minimal-seeders', 'filament-starter-minimal-users', 'filament-users-config', 'filament-impersonate-config'] as $tag) {
+            if ($this->call('vendor:publish', ['--tag' => $tag]) !== self::SUCCESS) {
+                throw new \RuntimeException("Publishing [{$tag}] failed.");
+            }
+        }
     }
 
     protected function hasMigrationPublished(string $pattern): bool
@@ -497,7 +505,7 @@ class MinimalStarterInstallCommand extends Command
 
     protected function userModelSupportsRoles(): bool
     {
-        $userModel = config('auth.providers.users.model');
+        $userModel = config('filament-starter-minimal.users.model') ?: config('auth.providers.users.model');
 
         if (! is_string($userModel) || $userModel === '' || ! class_exists($userModel)) {
             return false;

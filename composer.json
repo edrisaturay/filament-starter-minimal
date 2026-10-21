@@ -33,6 +33,7 @@
         "shuvroroy/filament-spatie-laravel-backup": "^3.4.0",
         "shuvroroy/filament-spatie-laravel-health": "^3.3.0",
         "slimani/filament-media-manager": "^0.13",
+        "stechstudio/filament-impersonate": "^5.0",
         "tomatophp/filament-users": "^5.0",
         "unifilemanager/filament-file-manager": "^0.7.2",
         "zvizvi/filament-column-filters": "^0.0.6"
@@ -43,13 +44,13 @@
         "pestphp/pest-plugin-laravel": "^4.1.0"
     },
     "suggest": {
-        "kenepa/resource-lock": "Prevent two users from editing the same record simultaneously (no Filament v5 release yet — registry entry is class_exists-guarded).",
+        "kenepa/resource-lock": "Prevent two users from editing the same record simultaneously (no Filament v5 release yet ; registry entry is class_exists-guarded).",
         "filament/spatie-laravel-settings-plugin": "Settings pages backed by spatie/laravel-settings (component package).",
         "filament/spatie-laravel-tags-plugin": "Filament form components for spatie/laravel-tags (component package).",
         "riodwanto/filament-ace-editor": "Ace code-editor form field for Filament (component package).",
         "ralphjsmit/laravel-filament-components": "Collection of handy Filament form/table components (component package).",
         "ysfkaya/filament-phone-input": "International phone-number form field (component package).",
-        "owen-it/laravel-auditing": "Eloquent auditing trait — wire into your models, not registered as a Filament plugin."
+        "owen-it/laravel-auditing": "Eloquent auditing trait ; wire into your models, not registered as a Filament plugin."
     },
     "autoload": {
         "psr-4": {

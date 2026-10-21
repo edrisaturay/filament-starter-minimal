@@ -2,6 +2,7 @@
 
 namespace EdrisaTuray\FilamentStarterMinimal\Filament\Resources;
 
+use EdrisaTuray\FilamentStarterMinimal\Filament\Actions\Impersonate;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
@@ -17,8 +18,7 @@ use Illuminate\Support\Facades\Hash;
 
 /**
  * Default UserResource shipped with the minimal starter. Wires in the
- * edrisaturay/filament-users impersonation action automatically when the
- * package is installed. Opt-out via config('filament-starter-minimal.users.enabled')
+ * stechstudio/filament-impersonate action. Opt-out via config('filament-starter-minimal.users.enabled')
  * when the consuming app already provides its own UserResource.
  *
  * Model class resolves from filament-starter-minimal.users.model, falling
@@ -80,13 +80,7 @@ class UserResource extends Resource
             DeleteAction::make(),
         ];
 
-        // Use edrisaturay/filament-users' ImpersonateAction (built on
-        // lab404/laravel-impersonate). Guarded so consumers removing that
-        // package in a fork won't break the resource.
-        $impersonate = '\\EdrisaTuray\\FilamentUsers\\Filament\\Resources\\Users\\Tables\\Actions\\ImpersonateAction';
-        if (class_exists($impersonate) && config('filament-users.impersonate.enabled', true)) {
-            array_unshift($recordActions, $impersonate::make());
-        }
+        array_unshift($recordActions, Impersonate::make());
 
         return $table
             ->columns([

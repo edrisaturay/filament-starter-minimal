@@ -1,6 +1,13 @@
 <?php
 
 return [
+    'seeders' => [
+        'admin' => [
+            'name' => 'Edrisa Turay',
+            'email' => 'edrisa@edrisa.com',
+            'password' => 'password',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -43,7 +50,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Shipped UserResource (with edrisaturay/filament-users' ImpersonateAction wired in).
+    | Shipped UserResource (with stechstudio/filament-impersonate wired in).
     | Set 'enabled' to false (or STARTER_MINIMAL_USER_RESOURCE=false) when the
     | consuming app already registers its own UserResource on managed panels,
     | to avoid two resources fighting over /users.
@@ -136,7 +143,7 @@ return [
                 'enabled' => true,
                 'options' => [],
             ],
-            'filament-knowledge-base-companion' => [
+            'filament-knowledge-base' => [
                 'enabled' => true,
                 'options' => [
                     'knowledge_base_panel_id' => 'knowledge-base',

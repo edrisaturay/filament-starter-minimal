@@ -8,15 +8,18 @@ use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterSafeModeCommand;
 use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterUpdateCommand;
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Filament\FilamentStarterMinimalPlugin;
+use EdrisaTuray\FilamentStarterMinimal\Filament\Users\UserActions;
 use EdrisaTuray\FilamentStarterMinimal\Registry\DefaultPluginCatalog;
 use EdrisaTuray\FilamentStarterMinimal\Support\MediaManagerBridge;
 use EdrisaTuray\FilamentStarterMinimal\Support\PlatformGate;
 use EdrisaTuray\FilamentStarterMinimal\Support\PluginRegistry;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Slimani\MediaManager\Models\File as SlimaniFile;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
+use STS\FilamentImpersonate\Facades\Impersonation;
 
 class FilamentStarterMinimalServiceProvider extends ServiceProvider
 {
@@ -26,6 +29,41 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
             __DIR__.'/../config/filament-starter-minimal.php',
             'filament-starter-minimal'
         );
+
+        $this->app->booting(function (): void {
+            config([
+                'filament-users.impersonate.enabled' => false,
+                // TomatoPHP registers its banner unconditionally, so move it off rendered hooks.
+                'filament-users.impersonate.banner.render_hook' => 'starter-minimal::disabled-impersonation-banner',
+                'filament-users.resource.table.actions' => UserActions::class,
+            ]);
+        });
+
+        $this->app->booted(function (): void {
+            if ($this->app->routesAreCached()) {
+                return;
+            }
+
+            foreach ($this->app['router']->getRoutes() as $route) {
+                if ($route->getName() === 'filament-impersonate.leave') {
+                    $action = $route->getAction();
+                    unset($action['as']);
+                    $route->setAction($action);
+                }
+            }
+
+            // Both vendors claim the same leave URI. Register STS on a distinct URI after they boot.
+            Route::get('starter-minimal/impersonation/leave', function () {
+                if (! Impersonation::isImpersonating()) {
+                    return redirect('/');
+                }
+
+                Impersonation::leave();
+
+                return redirect(session()->pull('impersonate.back_to') ?? '/');
+            })->name('filament-impersonate.leave')
+                ->middleware(config('filament-impersonate.leave_middleware', 'web'));
+        });
 
         $this->app->singleton(PluginRegistryContract::class, function ($app): PluginRegistry {
             $registry = new PluginRegistry;
@@ -63,6 +101,15 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../database/migrations' => database_path('migrations'),
             ], 'filament-starter-minimal-migrations');
+
+            $this->publishes([
+                __DIR__.'/../stubs/seeders/ShieldSeeder.php' => database_path('seeders/ShieldSeeder.php'),
+                __DIR__.'/../stubs/seeders/UserSeeder.php' => database_path('seeders/UserSeeder.php'),
+            ], ['filament-starter-minimal', 'filament-starter-minimal-seeders']);
+
+            $this->publishes([
+                __DIR__.'/../stubs/resources/Users' => app_path('Filament/Resources/Users'),
+            ], ['filament-starter-minimal', 'filament-starter-minimal-users']);
 
             $this->commands([
                 MinimalStarterInstallCommand::class,
