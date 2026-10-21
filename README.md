@@ -629,3 +629,37 @@ MIT. See the package `composer.json` for author metadata.
 ## Support
 
 Issues and source: see the monorepo or package repository you publish from. For Filament or Shield behavior, refer to the official **Filament v5** and **Filament Shield** documentation.
+
+
+## Optional Laravel tools
+
+`minimal-starter:install` offers a separate optional Laravel Tools selection. Nothing is selected automatically in unattended runs. These packages are installed in the consuming app only when selected.
+
+```bash
+php artisan minimal-starter:tools horizon telescope pulse
+php artisan minimal-starter:install --laravel-tools=horizon --laravel-tools=pennant --no-interaction
+php artisan minimal-starter:install --skip-laravel-tools
+```
+
+Available keys: `horizon`, `telescope`, `pulse`, `reverb`, `scout`, `pennant`, `sanctum`, `socialite`, `cashier`, `octane`, `sail`, `dusk`, `pint`, and `pail`. Sail, Dusk, Pint, and Pail are installed as development dependencies. Composer resolves versions compatible with the consuming app and must be on PATH. Package discovery and configuration run in fresh PHP processes after installation.
+
+Setup publishes configuration and migrations, preserves existing files and credentials, applies migrations, and records successful selections in `config/starter-minimal-tools.php`. Failures stop setup with a nonzero exit code; rerun the same selection after correcting the reported problem. Existing dashboard policies are replaced by the starter's super admin access policy for Horizon, Telescope, and Pulse, including in local environments. The `guard` setting can select a non-default session guard.
+
+| Tool | Automatic setup | Application or infrastructure work |
+| --- | --- | --- |
+| Horizon | Configuration, Redis queue driver, Predis when the PHP Redis extension is absent, dashboard authorization/link, snapshot schedule | Running Redis, supervised Horizon worker, Laravel scheduler |
+| Telescope | Configuration, migrations, sensitive request filtering, dashboard authorization/link, daily pruning | Laravel scheduler |
+| Pulse | Configuration, dashboard view, migrations, authorization/link | Supervise `pulse:check` for server metrics |
+| Reverb | Official broadcasting and Reverb setup, local credentials/configuration, Echo dependencies when package.json exists | Supervise Reverb, public host/TLS and build frontend assets |
+| Scout | Configuration, database driver if no driver is configured | Add Searchable to the models you want indexed |
+| Pennant | Configuration and feature storage migration | Define application feature flags |
+| Sanctum | Configuration, token migration, HasApiTokens on the configured user model | Define API routes and token issuance |
+| Socialite | GitHub/Google configuration merged into services, environment placeholders | OAuth credentials and application login/callback flow |
+| Cashier | Stripe configuration/migrations, Billable on the configured user model, environment placeholders | Stripe credentials/webhook registration and product/checkout flow |
+| Octane | Official FrankenPHP installation for a new setup | Process supervision and application compatibility with long-running workers |
+| Sail | Official Docker scaffolding with Redis; existing Compose files preserved | Docker installation and container startup |
+| Dusk | Official browser test scaffolding and ChromeDriver installation | Chrome and a running test application |
+| Pint | Laravel preset when no configuration exists | Run `vendor/bin/pint` |
+| Pail | Installed CLI log viewer | Run `php artisan pail` |
+
+Horizon changes `QUEUE_CONNECTION` to `redis`. External credentials are never invented, and the installer does not start production daemons or provision external services. The final setup output lists these remaining requirements explicitly. Cashier's standard migrations target the standard `users` table; custom billing schemas need application-specific migrations.

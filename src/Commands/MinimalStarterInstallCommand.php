@@ -18,6 +18,8 @@ use function Laravel\Prompts\multiselect;
 class MinimalStarterInstallCommand extends Command
 {
     protected $signature = 'minimal-starter:install
+                            {--laravel-tools=* : Optional Laravel tool keys to install}
+                            {--skip-laravel-tools : Skip the optional Laravel tool selection}
                             {--publish-config : Publish filament-starter-minimal.php to the config directory}
                             {--publish-all : Publish all plugin configs/migrations without asking}
                             {--force : Re-run install even if it has been completed before}';
@@ -73,6 +75,16 @@ class MinimalStarterInstallCommand extends Command
             }
 
             $this->setupShield();
+
+            if (! $this->option('skip-laravel-tools')) {
+                $arguments = ['tools' => $this->option('laravel-tools')];
+                if ($this->option('no-interaction')) {
+                    $arguments['--no-interaction'] = true;
+                }
+                if ($this->call('minimal-starter:tools', $arguments) !== self::SUCCESS) {
+                    return self::FAILURE;
+                }
+            }
 
             $this->info('minimal-starter:install completed.');
 

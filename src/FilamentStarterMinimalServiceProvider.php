@@ -5,6 +5,7 @@ namespace EdrisaTuray\FilamentStarterMinimal;
 use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterDoctorCommand;
 use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterInstallCommand;
 use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterSafeModeCommand;
+use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterToolsCommand;
 use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterUpdateCommand;
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Filament\FilamentStarterMinimalPlugin;
@@ -29,6 +30,9 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
             __DIR__.'/../config/filament-starter-minimal.php',
             'filament-starter-minimal'
         );
+
+        $this->mergeConfigFrom(__DIR__.'/../config/starter-minimal-tools.php', 'starter-minimal-tools');
+        $this->app->register(LaravelToolsServiceProvider::class);
 
         $this->app->booting(function (): void {
             config([
@@ -113,6 +117,7 @@ class FilamentStarterMinimalServiceProvider extends ServiceProvider
 
             $this->commands([
                 MinimalStarterInstallCommand::class,
+                MinimalStarterToolsCommand::class,
                 MinimalStarterUpdateCommand::class,
                 MinimalStarterDoctorCommand::class,
                 MinimalStarterSafeModeCommand::class,

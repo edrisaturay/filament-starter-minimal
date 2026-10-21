@@ -58,6 +58,7 @@ class FilamentStarterMinimalPlugin implements Plugin
         }
 
         $panel->resources($resources);
+        LaravelToolsNavigation::register($panel);
 
         PlatformPanelFactory::build($panel, $panelId, force: true);
     }

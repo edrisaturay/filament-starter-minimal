@@ -50,7 +50,21 @@
         "riodwanto/filament-ace-editor": "Ace code-editor form field for Filament (component package).",
         "ralphjsmit/laravel-filament-components": "Collection of handy Filament form/table components (component package).",
         "ysfkaya/filament-phone-input": "International phone-number form field (component package).",
-        "owen-it/laravel-auditing": "Eloquent auditing trait ; wire into your models, not registered as a Filament plugin."
+        "owen-it/laravel-auditing": "Eloquent auditing trait ; wire into your models, not registered as a Filament plugin.",
+        "laravel/horizon": "Optional: install and configure with php artisan minimal-starter:tools horizon",
+        "laravel/telescope": "Optional: install and configure with php artisan minimal-starter:tools telescope",
+        "laravel/pulse": "Optional: install and configure with php artisan minimal-starter:tools pulse",
+        "laravel/reverb": "Optional: install and configure with php artisan minimal-starter:tools reverb",
+        "laravel/scout": "Optional: install and configure with php artisan minimal-starter:tools scout",
+        "laravel/pennant": "Optional: install and configure with php artisan minimal-starter:tools pennant",
+        "laravel/sanctum": "Optional: install and configure with php artisan minimal-starter:tools sanctum",
+        "laravel/socialite": "Optional: install and configure with php artisan minimal-starter:tools socialite",
+        "laravel/cashier": "Optional: install and configure with php artisan minimal-starter:tools cashier",
+        "laravel/octane": "Optional: install and configure with php artisan minimal-starter:tools octane",
+        "laravel/sail": "Optional: install and configure with php artisan minimal-starter:tools sail",
+        "laravel/dusk": "Optional: install and configure with php artisan minimal-starter:tools dusk",
+        "laravel/pint": "Optional: install and configure with php artisan minimal-starter:tools pint",
+        "laravel/pail": "Optional: install and configure with php artisan minimal-starter:tools pail"
     },
     "autoload": {
         "psr-4": {

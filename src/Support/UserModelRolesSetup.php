@@ -19,11 +19,23 @@ class UserModelRolesSetup
             return false;
         }
 
+        return $this->ensureTrait($model, 'Spatie\\Permission\\Traits\\HasRoles');
+    }
+
+    public function ensureTrait(string $model, string $trait): bool
+    {
+        if (! trait_exists($trait)) {
+            throw new RuntimeException("Trait [{$trait}] is not installed.");
+        }
+        if (in_array($trait, class_uses_recursive($model), true)) {
+            return false;
+        }
+
         $reflection = new ReflectionClass($model);
         $path = $reflection->getFileName();
 
         if ($path === false || ! is_writable($path)) {
-            throw new RuntimeException("Cannot add HasRoles: the source file for [{$model}] is not writable.");
+            throw new RuntimeException("Cannot add trait: the source file for [{$model}] is not writable.");
         }
 
         $files = new Filesystem;
@@ -45,11 +57,11 @@ class UserModelRolesSetup
             }
 
             $newline = str_contains($source, "\r\n") ? "\r\n" : "\n";
-            $insertion = $newline.'    use \\Spatie\\Permission\\Traits\\HasRoles;'.$newline;
+            $insertion = $newline.'    use \\'.$trait.';'.$newline;
             $offset = $token->pos + 1;
 
             // A loaded class can be stale when ensure() runs twice in the same PHP process.
-            if (substr($source, $offset, strlen($insertion)) !== $insertion) {
+            if (! str_contains(substr($source, $offset), 'use \\'.$trait.';')) {
                 $updated = substr_replace($source, $insertion, $offset, 0);
                 PhpToken::tokenize($updated, TOKEN_PARSE);
                 $files->replace($path, $updated);
