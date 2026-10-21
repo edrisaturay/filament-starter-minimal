@@ -1,142 +1,35 @@
 # Filament Starter Minimal
 
-A **Laravel package** that ships a small, **Filament v5**-compatible “starter” layer: a **panel plugin** (`FilamentStarterMinimalPlugin`), a **plugin registry** (Shield-first), **database-backed overrides**, **cached plugin state**, and **Filament resources** for platform administration (plugin management, panel snapshots, audit log).
+A standalone Laravel package for building Filament v5 admin panels. It provides a configurable plugin registry, Shield permissions, user management with STS impersonation, and platform administration resources. Optional Laravel tools can be installed and configured from the same installer.
 
-It is intentionally **minimal** compared to [`edrisaturay/filament-starter`](https://github.com/edrisaturay/filament-starter): fewer bundled plugins, no multi-plugin publish wizard, and a **smaller** doctor surface—but it still ships **Artisan commands** in the same spirit as the full starter (`install`, `update`, `doctor`, `safe-mode`).
-
----
-
-## Artisan commands
-
-These mirror the **full starter** commands with a `minimal-starter:` prefix and lighter behavior.
-
-| Full starter (`edrisaturay/filament-starter`) | This package |
-|-----------------------------------------------|----------------|
-| `php artisan starter:install` | `php artisan minimal-starter:install` |
-| `php artisan starter:update` | `php artisan minimal-starter:update` |
-| `php artisan starter:doctor` | `php artisan minimal-starter:doctor` |
-| `php artisan starter:safe-mode on\|off` | `php artisan minimal-starter:safe-mode on\|off` |
-
-### `minimal-starter:install`
-
-- Optionally publishes config (`--publish-config`, or interactive confirm when not `--no-interaction`).
-- Publishes the configs and migrations of every installed bundled plugin (Shield + Spatie Permission, Activity Log, Media Library, Media Manager, Menu Builder, Exceptions, Breezy, Health, Sanctum, ...) — **before** migrating, so the snapshot never writes to a table that doesn't exist yet.
-- Runs `php artisan migrate --force`.
-- Calls `PanelSnapshotManager::snapshot()` (snapshots + plugin override sync) and applies per-panel plugin defaults.
-- Runs `shield:generate --all` for every managed panel registered with Filament. It does **not** run `shield:install`, which would inject a second `FilamentShieldPlugin` into your panel provider.
-
-```bash
-php artisan minimal-starter:install
-php artisan minimal-starter:install --publish-config --no-interaction
-```
-
-### `minimal-starter:update`
-
-Runs `migrate --force`, then `PanelSnapshotManager::snapshot()`. Use after deploy or dependency updates.
-
-```bash
-php artisan minimal-starter:update
-```
-
-### `minimal-starter:doctor`
-
-Runs health checks: database connectivity, minimal migrations present, Filament / Shield classes, snapshot row count, each `managed_panels` id registered with Filament, and that each registry plugin class exists.
-
-Exit codes:
-- `0` — every check passed or only `warning`-level findings
-- `1` — at least one **`critical`** finding (DB unreachable, Filament missing, registered plugin's class not autoloadable, etc.)
-
-`warning`-level findings (e.g. a managed panel id that isn't registered with Filament yet, zero snapshots) are reported but **do not fail the command** — operators can wire CI on `doctor || exit 1` without false negatives.
-
-```bash
-php artisan minimal-starter:doctor
-```
-
-### `minimal-starter:safe-mode`
-
-When **on**, plugins marked `dangerous_to_disable` in the registry are forced **enabled** in resolved state (same idea as the full starter). Implemented via cache key `starter_minimal_safe_mode_active`, optional env `STARTER_MINIMAL_SAFE_MODE`, or config `filament-starter-minimal.safe_mode`. Toggling clears plugin state cache for all Filament panels.
-
-```bash
-php artisan minimal-starter:safe-mode on
-php artisan minimal-starter:safe-mode off
-```
-
-**Note:** In `testing` env, safe mode reads as inactive (matches full starter behavior for tests).
-
----
+Install this package directly into your Laravel application. It does not require `edrisaturay/filament-starter`, a starter template, or this repository's development application.
 
 ## Requirements
 
-- PHP **^8.3**
-- Laravel **12** (`illuminate/support` ^12)
-- **Filament** ^5 (`filament/filament`)
-- **Filament Shield** ^4 (`bezhansalleh/filament-shield`)
-
-Your app should use a **Spatie-style role** on the authenticated user (e.g. `hasRole('super_admin')`) for the built-in Platform resources.
-
----
+- PHP `^8.3`.
+- Laravel with Illuminate components matching `^11.28`, `^12.0`, or `^13.0`, subject to the compatible versions of Filament and bundled dependencies resolved by Composer.
+- Filament `^5.0` and Filament Shield `^4.2.0`, included as Composer dependencies.
+- A configured application database and an authenticatable user model.
 
 ## Installation
 
-### Composer
+### 1. Install the package
+
+Run in your Laravel application:
 
 ```bash
 composer require edrisaturay/filament-starter-minimal
 ```
 
-Or add a **path repository** while developing:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "path",
-            "url": "packages/edrisaturay/filament-starter-minimal",
-            "options": { "symlink": true }
-        }
-    ],
-    "require": {
-        "edrisaturay/filament-starter-minimal": "dev-main"
-    }
-}
-```
-
-The package auto-registers `FilamentStarterMinimalServiceProvider` via Composer’s `extra.laravel.providers`.
-
-### Configuration (optional)
-
-Publish the config file to customize panel IDs, defaults, or the super-admin role:
+The service provider is discovered automatically. If the application does not yet have a Filament panel, create one:
 
 ```bash
-php artisan vendor:publish --tag=filament-starter-minimal-config
+php artisan filament:install --panels
 ```
 
-### Migrations
+### 2. Register the panel plugin
 
-Migrations are **loaded from the package** automatically (`loadMigrationsFrom`). Run:
-
-```bash
-php artisan migrate
-```
-
-If you prefer **copies** of migration files in your app (e.g. for customization), publish them:
-
-```bash
-php artisan vendor:publish --tag=filament-starter-minimal-migrations
-php artisan migrate
-```
-
----
-
-## Quick start
-
-### 1. Register the panel plugin
-
-In your `PanelProvider` (or wherever you configure the panel), add **one** plugin entry. Do **not** also register `FilamentShieldPlugin::make()` separately unless you intend to load Shield twice.
-
-Every plugin in the registry ships `defaultEnabled: true`, so this single line installs the whole stack — each installer is `class_exists`-guarded, so entries whose composer package isn't installed silently no-op. Turn individual plugins off per panel via `plugin_defaults` config or the **Plugin Management** UI.
-
-There is **no** auto-registration: a panel that omits this line gets none of the stack. Add it to **every** panel, not just one — Filament resolves plugins off the *default* panel while building routes, so a page contributed by a plugin on panel B (e.g. Breezy's `MyProfilePage`) will throw `Plugin [x] is not registered for panel [A]` when the default panel A is missing that plugin.
+Add the plugin to your application's Filament `PanelProvider`:
 
 ```php
 use EdrisaTuray\FilamentStarterMinimal\Filament\FilamentStarterMinimalPlugin;
@@ -145,61 +38,146 @@ use Filament\Panel;
 public function panel(Panel $panel): Panel
 {
     return $panel
-        // ...
+        // Keep your panel's existing ID, path, authentication, and middleware.
         ->plugins([
             FilamentStarterMinimalPlugin::make(),
         ]);
 }
 ```
 
-### 2. Align config with your panel ID
+Register it on each panel that uses this package. Shield is registered through the package, so do not also add `FilamentShieldPlugin::make()` or run `shield:install`.
 
-Edit `config/filament-starter-minimal.php` (or the merged defaults):
+### 3. Configure your panels
 
-- Set **`managed_panels`** to every Filament **panel id** that registers `FilamentStarterMinimalPlugin` (e.g. `['admin', 'staff']`).
-- Under **`plugin_defaults`**, add a block only for the panel/plugin combinations that should **deviate** from the registry default (or that need pinned options). Anything you leave out falls back to the definition's `defaultEnabled` / `defaultOptions`.
-
-`managed_panels` does **not** gate plugin installation — registering the plugin does that, on any panel. The list is what the sync / snapshot / doctor commands walk, and what cross-panel installers (e.g. the Knowledge Base companion) consult, so a panel that registers the plugin but is missing from the list will work but stay invisible to those tools.
-
-### 3. Seed snapshots and plugin override rows
-
-The **Plugin Management** UI expects **panel snapshots** (and sync populates **overrides**). After your panels are registered, call:
-
-```php
-use EdrisaTuray\FilamentStarterMinimal\Support\PanelSnapshotManager;
-
-PanelSnapshotManager::snapshot();
-```
-
-Typical places: `AppServiceProvider::boot()` (after Filament is ready), a dedicated Artisan command, or your deployment hook **once** per environment.
-
-### 4. Filament Shield
-
-`minimal-starter:install` publishes Shield's config, creates the permission tables and generates permissions/policies — do **not** run `shield:install` (it registers `FilamentShieldPlugin` on the panel a second time). Assign the **super admin** role configured in `filament-starter-minimal.superadmin.role` (default `super_admin`) to users who should access **Platform** resources:
+The default managed panel ID is `admin`. To use other IDs or change defaults, publish the configuration:
 
 ```bash
-php artisan shield:super-admin --panel=admin
+php artisan vendor:publish --tag=filament-starter-minimal-config
 ```
 
-The starter also wires Shield up so every bundled plugin's resources are reachable:
-
-- **Policies for vendor models** (activity log, menus, exceptions, ...) that `shield:generate` writes outside Laravel's policy discovery are registered via `FilamentShield::enforcePolicies()` (`shield.enforce_policies`, default `true`). Some plugins (e.g. filament-logger) hide their resource entirely without a registered policy.
-- **The super admin passes every gate** (`superadmin.bypass_gates`, default `true`) — some bundled plugins ship policies that check permission names Shield never generates (api-service's `TokenPolicy` asks for `view_any_token`). Skipped when Shield's own `super_admin.define_via_gate` is on.
-
-### 5. Breezy two-factor authentication
-
-Breezy's 2FA is enabled only when your user model uses Breezy's trait — without it, every panel request would fail on `hasConfirmedTwoFactor()`:
+In `config/filament-starter-minimal.php`, list every panel using the plugin:
 
 ```php
-use Jeffgreco13\FilamentBreezy\Traits\TwoFactorAuthenticatable;
-
-class User extends Authenticatable
-{
-    use HasRoles, TwoFactorAuthenticatable;
-}
+'managed_panels' => ['admin', 'staff'],
 ```
 
----
+Registering the panel plugin installs enabled registry plugins. `managed_panels` tells snapshot, sync, doctor, and cross-panel integrations which panels to manage. Keep the two aligned.
+
+### 4. Run setup
+
+Configure `.env` and the database connection first, then run:
+
+```bash
+php artisan minimal-starter:install
+```
+
+The installer:
+
+1. Adds Spatie Permission's `HasRoles` trait to the configured user model when needed, then restarts to load the change.
+2. Publishes `ShieldSeeder`, `UserSeeder`, the application Users resource, and its supporting configuration without overwriting existing files.
+3. Prepares plugin migrations and runs `migrate --force`.
+4. Creates panel snapshots and plugin override rows, with interactive plugin selections for each managed panel.
+5. Runs `ShieldSeeder` to generate permissions and policies for registered managed panels, then runs `UserSeeder` to prepare the super admin.
+6. Offers optional Laravel tools and installs/configures the selected tools.
+
+The default seeded account is:
+
+| Setting | Default |
+| --- | --- |
+| Name | Edrisa Turay |
+| Email | `edrisa@edrisa.com` |
+| Password for a new account | `password` |
+| Role | `super_admin` |
+
+Change `seeders.admin` in the published configuration before installation to use different account details. Existing account passwords are preserved. Change the default password before exposing the application publicly.
+
+For unattended setup, plugin choices use the configured defaults and optional Laravel tools must be selected explicitly:
+
+```bash
+php artisan minimal-starter:install --publish-config --no-interaction
+php artisan minimal-starter:install --laravel-tools=horizon --laravel-tools=telescope --laravel-tools=pulse --no-interaction
+```
+
+## Publishing without installing
+
+Publish the seeders and TomatoPHP-based application Users resource without running migrations or seeders:
+
+```bash
+php artisan vendor:publish --tag=filament-starter-minimal
+```
+
+Or publish them separately:
+
+```bash
+php artisan vendor:publish --tag=filament-starter-minimal-seeders
+php artisan vendor:publish --tag=filament-starter-minimal-users
+```
+
+Files are prepared in `database/seeders/` and `app/Filament/Resources/Users/`. Publishing only prepares files. `minimal-starter:install` performs setup and runs the seeders in order. Existing published files are retained unless you explicitly force a vendor publish.
+
+Package migrations are loaded automatically. Application copies are optional:
+
+```bash
+php artisan vendor:publish --tag=filament-starter-minimal-migrations
+```
+
+## Updating an existing application
+
+```bash
+composer update edrisaturay/filament-starter-minimal -W
+php artisan minimal-starter:update
+php artisan minimal-starter:doctor
+```
+
+`minimal-starter:update` runs migrations and refreshes panel snapshots and registry rows. It does not rerun the installation seeders or install optional tools. Use `minimal-starter:install` for installation setup, or `minimal-starter:tools` to add tools to an existing application.
+
+## Artisan commands
+
+| Command | Purpose |
+| --- | --- |
+| `minimal-starter:install` | Prepare plugin assets, migrate, sync panels, seed Shield and the admin user, and offer optional Laravel tools. |
+| `minimal-starter:tools` | Select, install, and configure optional Laravel tools. Accepts tool keys as arguments. |
+| `minimal-starter:update` | Run migrations and refresh panel snapshots and registry rows. |
+| `minimal-starter:doctor` | Check database access, migrations, registered panels, snapshots, and plugin classes. |
+| `minimal-starter:safe-mode on` | Force plugins marked dangerous to disable into the enabled state and clear plugin caches. |
+| `minimal-starter:safe-mode off` | Turn off the cached safe-mode setting and clear plugin caches. |
+
+Installation options include `--publish-config`, `--publish-all`, `--laravel-tools=*`, and `--skip-laravel-tools`. Commands accept Laravel's standard `--no-interaction` and verbosity flags.
+
+Doctor exits with `1` for critical findings and `0` for success or warnings only. Safe mode can also be configured with `STARTER_MINIMAL_SAFE_MODE` or `safe_mode`; it is inactive in the testing environment.
+
+## Optional Laravel tools
+
+`minimal-starter:install` offers a separate optional Laravel Tools selection. Nothing is selected automatically in unattended runs. These packages are installed in the consuming app only when selected.
+
+```bash
+php artisan minimal-starter:tools horizon telescope pulse
+php artisan minimal-starter:install --laravel-tools=horizon --laravel-tools=pennant --no-interaction
+php artisan minimal-starter:install --skip-laravel-tools
+```
+
+Available keys: `horizon`, `telescope`, `pulse`, `reverb`, `scout`, `pennant`, `sanctum`, `socialite`, `cashier`, `octane`, `sail`, `dusk`, `pint`, and `pail`. Sail, Dusk, Pint, and Pail are installed as development dependencies. Composer resolves versions compatible with the consuming app and must be on PATH. Package discovery and configuration run in fresh PHP processes after installation.
+
+Setup publishes configuration and migrations, preserves existing files and credentials, applies migrations, and records successful selections in `config/starter-minimal-tools.php`. Failures stop setup with a nonzero exit code; rerun the same selection after correcting the reported problem. Existing dashboard policies are replaced by the starter's super admin access policy for Horizon, Telescope, and Pulse, including in local environments. The `guard` setting can select a non-default session guard.
+
+| Tool | Automatic setup | Application or infrastructure work |
+| --- | --- | --- |
+| Horizon | Configuration, Redis queue driver, Predis when the PHP Redis extension is absent, dashboard authorization/link, snapshot schedule | Running Redis, supervised Horizon worker, Laravel scheduler |
+| Telescope | Configuration, migrations, sensitive request filtering, dashboard authorization/link, daily pruning | Laravel scheduler |
+| Pulse | Configuration, dashboard view, migrations, authorization/link | Supervise `pulse:check` for server metrics |
+| Reverb | Official broadcasting and Reverb setup, local credentials/configuration, Echo dependencies when package.json exists | Supervise Reverb, public host/TLS and build frontend assets |
+| Scout | Configuration, database driver if no driver is configured | Add Searchable to the models you want indexed |
+| Pennant | Configuration and feature storage migration | Define application feature flags |
+| Sanctum | Configuration, token migration, HasApiTokens on the configured user model | Define API routes and token issuance |
+| Socialite | GitHub/Google configuration merged into services, environment placeholders | OAuth credentials and application login/callback flow |
+| Cashier | Stripe configuration/migrations, Billable on the configured user model, environment placeholders | Stripe credentials/webhook registration and product/checkout flow |
+| Octane | Official FrankenPHP installation for a new setup | Process supervision and application compatibility with long-running workers |
+| Sail | Official Docker scaffolding with Redis; existing Compose files preserved | Docker installation and container startup |
+| Dusk | Official browser test scaffolding and ChromeDriver installation | Chrome and a running test application |
+| Pint | Laravel preset when no configuration exists | Run `vendor/bin/pint` |
+| Pail | Installed CLI log viewer | Run `php artisan pail` |
+
+Horizon changes `QUEUE_CONNECTION` to `redis`. External credentials are never invented, and the installer does not start production daemons or provision external services. The final setup output lists these remaining requirements explicitly. Cashier's standard migrations target the standard `users` table; custom billing schemas need application-specific migrations.
 
 ## What this package provides
 
@@ -224,7 +202,7 @@ File: `config/filament-starter-minimal.php` (merged as `filament-starter-minimal
 | `superadmin.role` | Role name checked by Platform resources (`hasRole()`). Default: `super_admin`. |
 | `superadmin.bypass_gates` | Users with the super-admin role pass every Gate/policy check (env `STARTER_MINIMAL_SUPERADMIN_BYPASS_GATES`). Default: `true`. |
 | `shield.enforce_policies` | Call `FilamentShield::enforcePolicies()` so Shield-generated policies for vendor models are registered (env `STARTER_MINIMAL_SHIELD_ENFORCE_POLICIES`). Default: `true`. |
-| `managed_panels` | Panel IDs that receive **registry** installers via `PlatformPanelFactory`. |
+| `managed_panels` | Panel IDs used by sync, snapshots, doctor, and cross-panel integrations. |
 | `plugin_defaults` | Nested: `panel_id` → `plugin_key` → `enabled`, `options`. Used before DB overrides. |
 
 Example for two panels:
@@ -252,15 +230,15 @@ Example for two panels:
 
 ## Database schema
 
-All tables use the **`starter_minimal_`** prefix so this package can coexist with **`edrisaturay/filament-starter`** (which uses `starter_*` without `_minimal_`).
+All package tables use the `starter_minimal_` prefix.
 
 | Table | Purpose |
 |-------|---------|
-| `starter_minimal_panel_plugin_overrides` | Per-panel, per-plugin `enabled`, `is_dangerous`, `options`. Also `options_version` (currently always `1`, reserved for future schema migrations) and `updated_by_user_id` (reserved; not yet auto-set by sync — populate manually if needed). Unique on `(panel_id, plugin_key)`. |
-| `starter_minimal_panel_snapshots` | Latest known Filament panel metadata (`path`, domains, middleware, and the consumer panel's `hasTenancy()` flag — informational only; this package itself is not multi-tenant aware). |
-| `starter_minimal_audit_logs` | Append-only log for plugin sync and override changes. Immutable — `update`/`delete` throw at the model layer. `actor_user_id` is auto-injected from `auth()->id()` and is **not** mass-assignable. |
+| `starter_minimal_panel_plugin_overrides` | Per-panel, per-plugin `enabled`, `is_dangerous`, `options`. Also `options_version` (currently always `1`, reserved for future schema migrations) and `updated_by_user_id` (reserved; not yet auto-set by sync, populate manually if needed). Unique on `(panel_id, plugin_key)`. |
+| `starter_minimal_panel_snapshots` | Latest known Filament panel metadata (`path`, domains, middleware, and the consumer panel's `hasTenancy()` flag, informational only; this package itself is not multi-tenant aware). |
+| `starter_minimal_audit_logs` | Append-only log for plugin sync and override changes. Immutable, `update`/`delete` throw at the model layer. `actor_user_id` is auto-injected from `auth()->id()` and is **not** mass-assignable. |
 
-**Dangerous plugins:** If `is_dangerous` is true, the `PanelPluginOverride` model forces `enabled` to stay true (same behavior as the full starter).
+**Dangerous plugins:** If `is_dangerous` is true, the `PanelPluginOverride` model forces `enabled` to stay true.
 
 ---
 
@@ -278,11 +256,11 @@ All tables use the **`starter_minimal_`** prefix so this package can coexist wit
 
 ## Bundled plugin catalog
 
-The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Every entry is **disabled by default** (except `filament-shield`) and every installer is `class_exists`-guarded — so the package can list a plugin without forcing you to `composer require` it. Toggle plugins on per-panel from **Plugin Management** in the admin UI, or pre-configure in `config/filament-starter-minimal.php`.
+The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Every entry is **enabled by default** and every installer is `class_exists`-guarded, so an optional entry whose dependency is absent is skipped. Bundled dependencies are installed by Composer; additional catalog entries may require a separate installation. Manage enabled plugins per panel from **Plugin Management** in the admin UI, or pre-configure in `config/filament-starter-minimal.php`.
 
 | Key | Package (`composer require ...`) | Notes |
 |-----|----------------------------------|-------|
-| `filament-shield` | `bezhansalleh/filament-shield` | RBAC. `dangerous_to_disable` — safe-mode forces it on. |
+| `filament-shield` | `bezhansalleh/filament-shield` | RBAC. `dangerous_to_disable`, safe-mode forces it on. |
 | `filament-panel-switch` | `bezhansalleh/filament-panel-switch` | Configures globally via `PanelSwitch::configureUsing()`. |
 | `filament-exceptions` | `bezhansalleh/filament-exceptions` | Adds an Exceptions resource. |
 | `filament-language-switch` | `bezhansalleh/filament-language-switch` | Configures globally. Pass `options.locales` to set available locales. |
@@ -302,10 +280,10 @@ The default catalog is registered for you in `Registry\DefaultPluginCatalog`. Ev
 | `filament-quick-create` | `awcodes/filament-quick-create` | Topbar quick-create dropdown. Options: `excludes`, `includes`, `sort_by`. |
 | `filament-log-viewer` | `achyutn/filament-log-viewer` | Laravel log reader page. Options: `authorize`, `register_navigation`, `navigation_*`, `polling_time`. |
 | `filament-uni-file-manager` | `unifilemanager/filament-file-manager` | Filesystem browser page. |
-| `filament-column-filters` | `zvizvi/filament-column-filters` | Excel-style filter popups in table column headers. No options — enabling it on a panel makes `->columnFilter()` available on that panel's table columns. |
-| `filament-users` | `tomatophp/filament-users` | User management with Shield roles + impersonation. Options: `avatar`, `user_resource`, `teams_resource` (all backed by **static** properties on the vendor plugin, so the last panel to install wins). Its user resource supersedes this package's shipped `UserResource` — see below. |
+| `filament-column-filters` | `zvizvi/filament-column-filters` | Excel-style filter popups in table column headers. No options, enabling it on a panel makes `->columnFilter()` available on that panel's table columns. |
+| `filament-users` | `tomatophp/filament-users` | User management with Shield roles and STS impersonation. Options: `avatar`, `user_resource`, `teams_resource` (all backed by **static** properties on the vendor plugin, so the last panel to install wins). Its user resource supersedes this package's shipped `UserResource`, see below. |
 
-Run `php artisan minimal-starter:doctor` after `composer require` to confirm the class autoloads — if a vendor renames their plugin class between versions, override the entry via `withPlugin()` (next section).
+Run `php artisan minimal-starter:doctor` after `composer require` to confirm the class autoloads, if a vendor renames their plugin class between versions, override the entry via `withPlugin()` (next section).
 
 ### Knowledge Base (Guava)
 
@@ -339,7 +317,7 @@ Store markdown under `docs/{panel-id}/{locale}/` and scaffold pages with `php ar
 
 Enabled by default on every managed panel. Registering it is what makes the
 `columnFilter()` macro available and wires the Livewire listeners that decorate
-table headers — disable the `filament-column-filters` key for a panel and the
+table headers, disable the `filament-column-filters` key for a panel and the
 macro stops existing there.
 
 ```php
@@ -367,13 +345,17 @@ use Zvizvi\FilamentColumnFilters\Concerns\HasColumnFilters;
 
 Translations (en/he) publish with `php artisan vendor:publish --tag=filament-column-filters-translations`.
 
+### Breezy two-factor authentication
+
+Breezy enables two-factor authentication only when the configured user model uses `Jeffgreco13\FilamentBreezy\Traits\TwoFactorAuthenticatable`. Add that trait if you want 2FA; `HasRoles` alone does not enable it.
+
 ## Companion packages (not panel plugins)
 
-These packages don't implement Filament's `Plugin` contract — they ship **form components**, **traits**, or **action classes** you compose into your own Resources. They're not in the registry. Two of them are bundled as hard dependencies (always installed), the rest are opt-in `composer require`:
+These packages don't implement Filament's `Plugin` contract, they ship **form components**, **traits**, or **action classes** you compose into your own Resources. They're not in the registry. Two of them are bundled as hard dependencies (always installed), the rest are opt-in `composer require`:
 
-**Bundled (auto-installed)** — class is autoloadable everywhere this starter runs:
+**Bundled (auto-installed)**, class is autoloadable everywhere this starter runs:
 
-- `filament/spatie-laravel-media-library-plugin` — media library form fields (use inside your Resources via `SpatieMediaLibraryFileUpload::make(...)`)
+- `filament/spatie-laravel-media-library-plugin`, media library form fields (use inside your Resources via `SpatieMediaLibraryFileUpload::make(...)`)
 - `stechstudio/filament-impersonate`: used by the TomatoPHP Users resource, published Users resource, and starter fallback resource. The starter action restricts impersonation to the configured super admin role and redirects within the current panel. STS supplies the leave banner and restores the original admin session.
 
   ```php
@@ -412,7 +394,7 @@ Bridging is **opt-in per model**. Configure it in `config/filament-starter-minim
 ],
 ```
 
-Models NOT listed under `models` are **not** bridged — the original Spatie upload happens, but no Slimani File row is created.
+Models NOT listed under `models` are **not** bridged, the original Spatie upload happens, but no Slimani File row is created.
 
 ### How it works
 
@@ -433,15 +415,19 @@ Copy-and-link keeps both worlds happy: forms keep displaying their uploads, and 
 
 If the duplication matters for your file sizes, set `STARTER_MINIMAL_MEDIA_BRIDGE=false` and write a thinner bridge tailored to your app.
 
-## Shipped UserResource
+## Users resource and impersonation
+
+Installation publishes `App\Filament\Resources\Users\UserResource` and its pages as application wrappers around TomatoPHP's Users resource. The integration selects the published resource when available and avoids registering the vendor resource alongside it. Customize the published files in your application.
+
+User impersonation uses `stechstudio/filament-impersonate`. TomatoPHP's built-in impersonation is disabled; STS provides the leave-impersonation banner and restores the original admin session. The starter action permits the configured super admin role.
 
 The package ships a default `UserResource` (`EdrisaTuray\FilamentStarterMinimal\Filament\Resources\UserResource`) with the Impersonate action pre-wired.
 
-**It stands down by default.** `tomatophp/filament-users` is bundled and enabled, and it registers its own user resource over the same model — two of them would collide on slug and navigation. So on any panel where the `filament-users` plugin is enabled (with `options.user_resource` left on), the shipped resource is skipped automatically; no config flag needed. Disable `filament-users` for a panel — via `plugin_defaults` or the Plugin Management UI — to get the shipped resource back.
+**It stands down by default.** `tomatophp/filament-users` is bundled and enabled, and its integration uses the published application resource when available, otherwise the vendor resource. Registering the fallback resource too would duplicate users in navigation. So on any panel where the `filament-users` plugin is enabled (with `options.user_resource` left on), the shipped resource is skipped automatically; no config flag needed. Disable `filament-users` for a panel, via `plugin_defaults` or the Plugin Management UI, to get the shipped resource back.
 
 - **Model** resolves dynamically from `config('filament-starter-minimal.users.model')`, falling back to `config('auth.providers.users.model')` (so `App\Models\User` by default).
-- **Authorization** is left to Laravel policies (Filament Shield generates them automatically when you run `php artisan shield:install`).
-- **Disable** unconditionally when the consuming app registers its own UserResource:
+- **Authorization** is left to Laravel policies (the installation Shield seeder generates them for managed panels).
+- **Disable the fallback resource** when the consuming app registers its own UserResource. Also disable the `filament-users` resource through its `user_resource` option if replacing the TomatoPHP resource:
   ```env
   STARTER_MINIMAL_USER_RESOURCE=false
   ```
@@ -455,12 +441,12 @@ The package ships a default `UserResource` (`EdrisaTuray\FilamentStarterMinimal\
 
 **Optional (`composer require` as needed)**:
 
-- `filament/spatie-laravel-settings-plugin` — Spatie-Settings-backed pages
-- `filament/spatie-laravel-tags-plugin` — tag form components
-- `riodwanto/filament-ace-editor` — Ace code editor form field
-- `ralphjsmit/laravel-filament-components` — assorted helper components
-- `ysfkaya/filament-phone-input` — international phone-number form field
-- `owen-it/laravel-auditing` — model trait, not Filament-specific
+- `filament/spatie-laravel-settings-plugin`, Spatie-Settings-backed pages
+- `filament/spatie-laravel-tags-plugin`, tag form components
+- `riodwanto/filament-ace-editor`, Ace code editor form field
+- `ralphjsmit/laravel-filament-components`, assorted helper components
+- `ysfkaya/filament-phone-input`, international phone-number form field
+- `owen-it/laravel-auditing`, model trait, not Filament-specific
 
 ## Extending the registry
 
@@ -509,13 +495,13 @@ This blocks the chained-takeover path where a third-party plugin could redefine 
 
 ### `isDangerous()` semantics
 
-`PluginRegistry::isDangerous(string $key, ?string $panelId = null)` returns `true` only if the **registry definition** for `$key` has `dangerousToDisable=true`. The `$panelId` parameter is accepted for API compatibility but ignored — the registry is the single source of truth. The `is_dangerous` DB column is a denormalized cache maintained by the model's `saving` hook; reading it is unnecessary and risks drift.
+`PluginRegistry::isDangerous(string $key, ?string $panelId = null)` returns `true` only if the **registry definition** for `$key` has `dangerousToDisable=true`. The `$panelId` parameter is accepted for API compatibility but ignored, the registry is the single source of truth. The `is_dangerous` DB column is a denormalized cache maintained by the model's `saving` hook; reading it is unnecessary and risks drift.
 
 ---
 
 ## Caching and invalidation
 
-- Resolved state is cached **forever** per panel under key `starter_minimal_plugins_{panelId}_v{registry-signature}`. The signature changes whenever a `PluginDefinition` is added, removed, or has its `defaultEnabled`/`dangerousToDisable` modified — so registering a plugin via `withPlugin()` automatically misses the old cache.
+- Resolved state is cached **forever** per panel under key `starter_minimal_plugins_{panelId}_v{registry-signature}`. The signature changes whenever a `PluginDefinition` is added, removed, or has its `defaultEnabled`/`dangerousToDisable` modified, so registering a plugin via `withPlugin()` automatically misses the old cache.
 - Saving or deleting a `PanelPluginOverride` calls **`PluginStateResolver::invalidate()`** for that panel.
 - The **Clear Plugin Cache** action in Plugin Management clears the resolver cache for **all** registered Filament panels.
 - When **safe mode** is active, resolved state forces `dangerous_to_disable` plugins on before the result is cached; use **`minimal-starter:safe-mode on|off`** so caches are invalidated automatically.
@@ -525,12 +511,12 @@ This blocks the chained-takeover path where a third-party plugin could redefine 
 `PluginSyncManager::sync()` is the write path that reconciles your code-level registry against the per-panel override rows in the database. Triggered from the **Sync from Registry** button, the install/update commands, or programmatically.
 
 For every `(managed_panel × registry_plugin)` pair it:
-1. Acquires a 60-second `Cache::lock('starter_minimal_sync')` (other concurrent calls block up to 10 seconds — prevents racing inserts during a deploy).
+1. Acquires a 60-second `Cache::lock('starter_minimal_sync')` (other concurrent calls block up to 10 seconds, prevents racing inserts during a deploy).
 2. Inside a single `DB::transaction()`, calls `PanelPluginOverride::updateOrCreate()` for each pair so model events (audit log + cache invalidation) fire.
 3. Deletes any override row whose `plugin_key` is no longer in the registry **or** whose `panel_id` is no longer in `managed_panels`. Each deletion writes an audit row.
 4. After commit, invalidates `PluginStateResolver` caches for every registered panel.
 
-Calling `sync()` twice in a row is a no-op on the second call — `updateOrCreate` only writes when fields differ from their defaults.
+Calling `sync()` twice in a row is a no-op on the second call, `updateOrCreate` only writes when fields differ from their defaults.
 
 ---
 
@@ -538,49 +524,29 @@ Calling `sync()` twice in a row is a no-op on the second call — `updateOrCreat
 
 Out of the box, with **zero published config**:
 
-- `managed_panels` is `['admin']` — the panel list the sync, snapshot and doctor commands walk. Every panel that registers `FilamentStarterMinimalPlugin` still gets its plugins; list each one here so those tools see it.
-- `superadmin.role` is `super_admin` — the role name checked by every Platform resource. **Your User model must have `spatie/laravel-permission`'s `HasRoles` trait** (or another implementation that exposes a `hasRole(string $role)` method), and a role with that name must exist and be assigned. If neither is true, the resources are simply invisible to all users (closed-default).
+- `managed_panels` is `['admin']`, the panel list the sync, snapshot and doctor commands walk. Every panel that registers `FilamentStarterMinimalPlugin` still gets its plugins; list each one here so those tools see it.
+- `superadmin.role` is `super_admin`, the role name checked by every Platform resource. The installer adds `HasRoles` when needed and the user seeder assigns this role. Platform resources require an authenticated user with that role.
 - `safe_mode` is `false`.
-- This package is **single-tenant**. The override / snapshot / audit tables key by `panel_id` only. The consumer's individual Filament panels may use Filament tenancy themselves — that's orthogonal.
-- The registry seeds `filament-shield` (`enabled = true`, `dangerous_to_disable = true`); every other plugin in the catalog is registered as `enabled = false`. Toggle them on per-panel via Plugin Management or via `plugin_defaults` in the published config.
+- This package is **single-tenant**. The override / snapshot / audit tables key by `panel_id` only. The consumer's individual Filament panels may use Filament tenancy themselves, that's orthogonal.
+- All registry entries default to enabled. Missing optional dependencies are skipped. Disable plugins per panel using Plugin Management or `plugin_defaults`; Shield is marked dangerous to disable.
 
 ## Troubleshooting
 
 | Symptom | Likely cause / fix |
 |---------|--------------------|
-| Platform resources invisible to all users | The User model is missing the role trait, or no user has the configured `super_admin` role. Doctor cannot detect this — check `$user->hasRole('super_admin')` directly. |
+| Platform resources invisible to all users | The User model is missing the role trait, or no user has the configured `super_admin` role. Doctor cannot detect this, check `$user->hasRole('super_admin')` directly. |
 | Plugin Management UI is empty | No snapshots yet. Run `php artisan minimal-starter:install` (or `:update`) to populate `starter_minimal_panel_snapshots` and the override table. |
-| Toggling a plugin in the UI does nothing | Check that the panel id is in `managed_panels`. `PlatformPanelFactory` short-circuits non-managed panels even though the resources still appear. |
+| Toggling a plugin in the UI does nothing | Check that the panel registers the plugin, its ID is listed in `managed_panels`, and the dependency is installed. Protected plugins cannot be disabled. Clear the plugin cache after checking overrides. |
 | `Cache::rememberForever` returns stale state in production | The cache driver must be persistent (`redis`, `database`, `file`). The resolver caches forever; with `array` driver the cache is recreated cold every request. |
 | Doctor reports a plugin's class missing after `composer require` | The vendor renamed its plugin class. Override the entry via `FilamentStarterMinimalPlugin::make()->withPlugin(new PluginDefinition(...))` with the correct FQCN, then run **Sync from Registry**. |
 | Shield resources appearing twice | You registered both `FilamentStarterMinimalPlugin::make()` and `FilamentShieldPlugin::make()` on the same panel. Drop the bare Shield registration; this starter installs Shield via the registry. |
-
-## Commands reference
-
-| Command | Purpose | Exits non-zero on |
-|---------|---------|-------------------|
-| `minimal-starter:install` | Publish config (optional), `migrate --force`, snapshot + sync | `migrate` non-zero exit OR any `Throwable` from snapshot/sync |
-| `minimal-starter:update` | `migrate --force`, snapshot + sync. Re-runnable. | Same |
-| `minimal-starter:doctor` | Health checks (see above) | Any `critical` finding |
-| `minimal-starter:safe-mode {on\|off}` | Toggle the safe-mode cache flag, invalidate plugin caches | Invalid argument |
-
-All commands accept `--no-interaction` and respect Laravel's standard verbosity flags.
-
-## Coexistence with `edrisaturay/filament-starter`
-
-- **Different DB tables** (`starter_minimal_*` vs `starter_*`).
-- **Different Filament plugin id** (`filament-starter-minimal` vs `filament-starter`).
-- **Different config file** (`filament-starter-minimal.php` vs `filament-starter.php`).
-
-You should not load **both** starter panel plugins on the same panel if they both register Shield or duplicate resources—pick one package per panel.
-
----
 
 ## Package layout
 
 ```
 config/
   filament-starter-minimal.php
+  starter-minimal-tools.php
 database/
   migrations/
     *_create_starter_minimal_tables.php
@@ -614,11 +580,16 @@ src/
 
 ---
 
-## Testing (in a consuming app)
+## Package development and testing
 
-The reference application includes Pest tests under `tests/Unit/FilamentStarterMinimalTest.php` that assert registry shape, config resolution, DB merge behavior (with a targeted `migrate --path` when needed), and plugin id stability.
+For local development, add a Composer path repository in the consuming application's `composer.json` pointing to your checkout of this package, then require `edrisaturay/filament-starter-minimal:dev-main`. No other starter package is needed.
 
----
+The package has its own Pest and Orchestra Testbench suite. Run from the package checkout:
+
+```bash
+composer install
+vendor/bin/pest
+```
 
 ## License
 
@@ -628,38 +599,4 @@ MIT. See the package `composer.json` for author metadata.
 
 ## Support
 
-Issues and source: see the monorepo or package repository you publish from. For Filament or Shield behavior, refer to the official **Filament v5** and **Filament Shield** documentation.
-
-
-## Optional Laravel tools
-
-`minimal-starter:install` offers a separate optional Laravel Tools selection. Nothing is selected automatically in unattended runs. These packages are installed in the consuming app only when selected.
-
-```bash
-php artisan minimal-starter:tools horizon telescope pulse
-php artisan minimal-starter:install --laravel-tools=horizon --laravel-tools=pennant --no-interaction
-php artisan minimal-starter:install --skip-laravel-tools
-```
-
-Available keys: `horizon`, `telescope`, `pulse`, `reverb`, `scout`, `pennant`, `sanctum`, `socialite`, `cashier`, `octane`, `sail`, `dusk`, `pint`, and `pail`. Sail, Dusk, Pint, and Pail are installed as development dependencies. Composer resolves versions compatible with the consuming app and must be on PATH. Package discovery and configuration run in fresh PHP processes after installation.
-
-Setup publishes configuration and migrations, preserves existing files and credentials, applies migrations, and records successful selections in `config/starter-minimal-tools.php`. Failures stop setup with a nonzero exit code; rerun the same selection after correcting the reported problem. Existing dashboard policies are replaced by the starter's super admin access policy for Horizon, Telescope, and Pulse, including in local environments. The `guard` setting can select a non-default session guard.
-
-| Tool | Automatic setup | Application or infrastructure work |
-| --- | --- | --- |
-| Horizon | Configuration, Redis queue driver, Predis when the PHP Redis extension is absent, dashboard authorization/link, snapshot schedule | Running Redis, supervised Horizon worker, Laravel scheduler |
-| Telescope | Configuration, migrations, sensitive request filtering, dashboard authorization/link, daily pruning | Laravel scheduler |
-| Pulse | Configuration, dashboard view, migrations, authorization/link | Supervise `pulse:check` for server metrics |
-| Reverb | Official broadcasting and Reverb setup, local credentials/configuration, Echo dependencies when package.json exists | Supervise Reverb, public host/TLS and build frontend assets |
-| Scout | Configuration, database driver if no driver is configured | Add Searchable to the models you want indexed |
-| Pennant | Configuration and feature storage migration | Define application feature flags |
-| Sanctum | Configuration, token migration, HasApiTokens on the configured user model | Define API routes and token issuance |
-| Socialite | GitHub/Google configuration merged into services, environment placeholders | OAuth credentials and application login/callback flow |
-| Cashier | Stripe configuration/migrations, Billable on the configured user model, environment placeholders | Stripe credentials/webhook registration and product/checkout flow |
-| Octane | Official FrankenPHP installation for a new setup | Process supervision and application compatibility with long-running workers |
-| Sail | Official Docker scaffolding with Redis; existing Compose files preserved | Docker installation and container startup |
-| Dusk | Official browser test scaffolding and ChromeDriver installation | Chrome and a running test application |
-| Pint | Laravel preset when no configuration exists | Run `vendor/bin/pint` |
-| Pail | Installed CLI log viewer | Run `php artisan pail` |
-
-Horizon changes `QUEUE_CONNECTION` to `redis`. External credentials are never invented, and the installer does not start production daemons or provision external services. The final setup output lists these remaining requirements explicitly. Cashier's standard migrations target the standard `users` table; custom billing schemas need application-specific migrations.
+Source and issues: [edrisaturay/filament-starter-minimal](https://github.com/edrisaturay/filament-starter-minimal). For Filament or Shield behavior, refer to the official **Filament v5** and **Filament Shield** documentation.
