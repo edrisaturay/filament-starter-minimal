@@ -1,5 +1,6 @@
 <?php
 
+use Composer\InstalledVersions;
 use EdrisaTuray\FilamentStarterMinimal\Commands\MinimalStarterToolsCommand;
 use EdrisaTuray\FilamentStarterMinimal\Http\Middleware\AuthorizeLaravelTool;
 use EdrisaTuray\FilamentStarterMinimal\Support\LaravelToolCatalog;
@@ -211,5 +212,29 @@ it('installs missing Echo dependencies with the existing package manager', funct
         expect($command->processes)->toBe([['pnpm', 'add', '--save-dev', 'laravel-echo', '@laravel/echo-vue']]);
     } finally {
         $this->app->setBasePath($originalPath);
+    }
+});
+
+it('allows Composer to resolve locked dependencies when installing tools', function (): void {
+    $command = new class extends MinimalStarterToolsCommand
+    {
+        public array $processes = [];
+
+        public function installSelection(array $keys): void
+        {
+            $this->installPackages($keys);
+        }
+
+        public function runProcess(array $arguments): void
+        {
+            $this->processes[] = $arguments;
+        }
+    };
+    $keys = array_keys(array_filter(LaravelToolCatalog::all(), fn (array $tool): bool => ! InstalledVersions::isInstalled($tool['package'])));
+    expect($keys)->not->toBeEmpty();
+    $command->installSelection($keys);
+    expect($command->processes)->not->toBeEmpty();
+    foreach ($command->processes as $arguments) {
+        expect($arguments)->toContain('require', '--with-all-dependencies', '--no-scripts', '--no-interaction');
     }
 });

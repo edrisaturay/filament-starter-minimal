@@ -87,7 +87,7 @@ class MinimalStarterToolsCommand extends Command
             if ($composer === null) {
                 throw new RuntimeException('Composer must be available on PATH to install selected Laravel tools.');
             }
-            $arguments = [$composer, 'require', ...$packages, '--no-interaction', '--no-scripts'];
+            $arguments = [$composer, 'require', ...$packages, '--no-interaction', '--no-scripts', '--with-all-dependencies'];
             if ($dev) {
                 $arguments[] = '--dev';
             }
