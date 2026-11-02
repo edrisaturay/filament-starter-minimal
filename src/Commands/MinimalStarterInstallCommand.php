@@ -5,6 +5,7 @@ namespace EdrisaTuray\FilamentStarterMinimal\Commands;
 use EdrisaTuray\FilamentStarterMinimal\Contracts\PluginRegistryContract;
 use EdrisaTuray\FilamentStarterMinimal\Models\PanelPluginOverride;
 use EdrisaTuray\FilamentStarterMinimal\Registry\PluginDefinition;
+use EdrisaTuray\FilamentStarterMinimal\Support\PanelPluginSetup;
 use EdrisaTuray\FilamentStarterMinimal\Support\PanelSnapshotManager;
 use EdrisaTuray\FilamentStarterMinimal\Support\UserModelRolesSetup;
 use Illuminate\Console\Command;
@@ -38,6 +39,12 @@ class MinimalStarterInstallCommand extends Command
 
             if (app(UserModelRolesSetup::class)->ensure($model)) {
                 $this->info("Added HasRoles to {$model}. Restarting installation to load the updated model...");
+
+                return $this->restartInstallation();
+            }
+
+            if (app(PanelPluginSetup::class)->ensure()) {
+                $this->info('Registered FilamentStarterMinimalPlugin on managed panels. Restarting installation to load the updated providers...');
 
                 return $this->restartInstallation();
             }
@@ -126,7 +133,6 @@ class MinimalStarterInstallCommand extends Command
         ) {
             $this->call('vendor:publish', [
                 '--tag' => 'filament-starter-minimal-config',
-                '--force' => true,
             ]);
         }
     }

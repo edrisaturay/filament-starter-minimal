@@ -27,9 +27,11 @@ The service provider is discovered automatically. If the application does not ye
 php artisan filament:install --panels
 ```
 
-### 2. Register the panel plugin
+### 2. Panel registration
 
-Add the plugin to your application's Filament `PanelProvider`:
+`minimal-starter:install` automatically registers the plugin in each configured managed panel's application `PanelProvider`, preserving its existing settings and plugins. It restarts before continuing so resources and Shield permissions see the updated panels. Existing registrations are left alone.
+
+For a custom provider that the installer cannot safely edit, register the plugin explicitly:
 
 ```php
 use EdrisaTuray\FilamentStarterMinimal\Filament\FilamentStarterMinimalPlugin;
@@ -45,7 +47,7 @@ public function panel(Panel $panel): Panel
 }
 ```
 
-Register it on each panel that uses this package. Shield is registered through the package, so do not also add `FilamentShieldPlugin::make()` or run `shield:install`.
+List each panel that should use this package in `managed_panels`. Shield is registered through the package, so do not also add `FilamentShieldPlugin::make()` or run `shield:install`.
 
 ### 3. Configure your panels
 
@@ -74,11 +76,12 @@ php artisan minimal-starter:install
 The installer:
 
 1. Adds Spatie Permission's `HasRoles` trait to the configured user model when needed, then restarts to load the change.
-2. Publishes `ShieldSeeder`, `UserSeeder`, the application Users resource, and its supporting configuration without overwriting existing files.
-3. Prepares plugin migrations and runs `migrate --force`.
-4. Creates panel snapshots and plugin override rows, with interactive plugin selections for each managed panel.
-5. Runs `ShieldSeeder` to generate permissions and policies for registered managed panels, then runs `UserSeeder` to prepare the super admin.
-6. Offers optional Laravel tools and installs/configures the selected tools.
+2. Registers the starter plugin in managed panel providers and restarts when their source changes. Missing panels or unsupported provider definitions stop setup with a clear error.
+3. Publishes `ShieldSeeder`, `UserSeeder`, the application Users resource, and its supporting configuration without overwriting existing files.
+4. Prepares plugin migrations and runs `migrate --force`.
+5. Creates panel snapshots and plugin override rows, with interactive plugin selections for each managed panel.
+6. Runs `ShieldSeeder` to generate permissions and policies for registered managed panels, then runs `UserSeeder` to prepare the super admin.
+7. Offers optional Laravel tools and installs/configures the selected tools.
 
 The default seeded account is:
 
