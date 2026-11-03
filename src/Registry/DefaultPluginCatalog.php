@@ -63,8 +63,8 @@ class DefaultPluginCatalog
                             if (isset($options['icons']) && method_exists($switch, 'icons')) {
                                 $switch->icons($options['icons']);
                             }
-                            if (isset($options['simple']) && method_exists($switch, 'simple')) {
-                                $switch->simple($options['simple']);
+                            if (method_exists($switch, 'simple')) {
+                                $switch->simple($options['simple'] ?? true);
                             }
                         });
                     }
